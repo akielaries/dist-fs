@@ -5,7 +5,7 @@
 
 #define DIST_FS_RIFF 0x52494646
 #define DIST_FS_WAVE 0x57415645
-#define DIST_FS_FMT 0x666d7420
+#define DIST_FS_FMT  0x666d7420
 
 /** @brief enumeration of file types */
 typedef enum {

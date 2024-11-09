@@ -1,0 +1,12 @@
+---
+BasedOnStyle:  Google
+MaxEmptyLinesToKeep: 2
+AllowShortFunctionsOnASingleLine: None
+SortIncludes: false
+ColumnLimit: 100
+AlignConsecutiveMacros: true
+IndentWidth: 2
+ContinuationIndentWidth: 2
+Cpp11BracedListStyle: false
+PointerAlignment: Right
+...
