@@ -33,3 +33,13 @@ can append (add something to the end)
 #### Networking
 - [ ] Make the file system available in some way
 no idea what this will look like right now
+
+
+## wav file format
+- https://en.wikipedia.org/wiki/WAV
+- https://en.wikipedia.org/wiki/WAV#WAV_file_header
+
+[image1](test_files/wav_format1.png)
+[image2](test_files/wav_format2.png)
+
+Test `.wav` files are from this UIC CS site: https://www2.cs.uic.edu/~i101/SoundFiles/
