@@ -13,13 +13,17 @@ To start, we don't care about the "distributed" part, just an accesible common f
 can append (add something to the end)
 
 ### Some tasks
-- [ ] File System
-  - [ ] **Start** with a simple CLI util that can be ran...
+#### File System
+- [ ] **Start** with a simple CLI util that can be ran...
     - `./dist-fs --upload <wav>`
     - `./dist-fs --download <wav>`
   - Think about how dynamic this should be. We could start with just supporting `.wav`, `.mp3`, other audio formats?
-  - [ ] start with parsing a wave file, what is it's format?
-    - lhttps://en.wikipedia.org/wiki/WAV
+  - [ ] start with parsing a wave file, what is its format?
+    - https://en.wikipedia.org/wiki/WAV
     - https://en.wikipedia.org/wiki/WAV#WAV_file_header
   - [ ] figure out addressing, how to get a chunk of memory allocated to us cleanly
-  - [ ] 
+    - how can it grow/shrink? this think shouldn't grow in size unless files get added
+       
+#### Networking
+- [ ] Make the file system available in some way
+no idea what this will look like right now
