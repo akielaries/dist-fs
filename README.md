@@ -3,6 +3,14 @@ Distributed File System (maybe?)
 
 This is a **rough** draft of a project idea for a distributed filesystem that replace our (Chico and I's) need for dropbox.
 
+Easy build with:
+
+```
+mkdir build && cd build
+cmake ../
+make
+```
+
 ## Some things for me to do
 - Figure out how to make the raspberry pi accessible from outside my network for chico to talk to
 - Guide to get started
