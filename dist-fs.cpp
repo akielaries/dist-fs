@@ -29,6 +29,8 @@ int get_wav_file(const char *file) {
 }
 
 dist_fs_file_types_e get_file_type(const char *filename) {
+  dist_fs_file_types_e file_type;
+
   // read in the audio file
   std::ifstream audio_file(filename, std::ios::binary);
   if (!audio_file) {
@@ -54,6 +56,13 @@ dist_fs_file_types_e get_file_type(const char *filename) {
   // first 4 bytes in ascii
   std::string ascii_chunk_id = hex_to_ascii(file_chunk_id);
   printf("File Chunk ID: 0x%08X (%s)\n", file_chunk_id, ascii_chunk_id.c_str());
+
+  // based on the first 4 bytes, lets switch case our way thru possible options
+  switch (file_type) {
+
+    case 
+
+  }
 
   // check for RIFF identifier this is most likely to indicate a WAV file
   if (file_chunk_id == DIST_FS_RIFF) {
