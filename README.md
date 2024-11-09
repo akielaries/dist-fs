@@ -40,13 +40,13 @@ no idea what this will look like right now
 - https://en.wikipedia.org/wiki/WAV#WAV_file_header
 - http://soundfile.sapp.org/doc/WaveFormat/
 
-![image1](test_files/wav_format1.png)
-![image2](test_files/wav_format2.png)
+![image1](test_files/imgs/wav_format1.png)
+![image2](test_files/imgs/wav_format2.png)
 
 Some explanation for the image above on what the file header + data look like. 
 
 
 Notice this hexdump of the `.wav` files under `test_files/` and the pieces of the file header we 
 can see:
-![image3](test_files/wav_hexdump.png)
+![image3](test_files/imgs/wav_hexdump.png)
 Test `.wav` files are from this UIC CS site: https://www2.cs.uic.edu/~i101/SoundFiles/
