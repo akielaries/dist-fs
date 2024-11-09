@@ -21,39 +21,56 @@ std::string hex_to_ascii(unsigned int hexValue) {
   return oss.str();
 }
 
+dist_fs_file_types_e get_file_type(const char *filename) {
+    std::ifstream audio_file(filename, std::ios::binary);
+    if (!audio_file) {
+        printf("No such file %s\n", filename);
+        return DIST_FS_TYPE_UNKNOWN;
+    }
+
+    // Read the file into a vector of bytes
+    std::vector<char> audio_file_data((std::istreambuf_iterator<char>(audio_file)),
+                                      std::istreambuf_iterator<char>());
+
+    if (audio_file_data.size() < DIST_FS_TYPE_SZ) {
+        printf("File is too small to contain a valid RIFF header.\n");
+        return DIST_FS_TYPE_UNKNOWN;
+    }
+
+    // Save the first 4 bytes to a variable as an unsigned integer
+    uint32_t file_chunk_id = (static_cast<unsigned char>(audio_file_data[0]) << 24) |
+                             (static_cast<unsigned char>(audio_file_data[1]) << 16) |
+                             (static_cast<unsigned char>(audio_file_data[2]) << 8) |
+                             static_cast<unsigned char>(audio_file_data[3]);
+
+    // Print the file chunk ID in hex and ASCII for debugging
+    std::string ascii_chunk_id = hex_to_ascii(file_chunk_id);
+    printf("File Chunk ID: 0x%08X (%s)\n", file_chunk_id, ascii_chunk_id.c_str());
+
+    // Check if the chunk ID matches the RIFF identifier
+    if (file_chunk_id == DIST_FS_RIFF) {
+        printf("RIFF chunk found\n");
+        return DIST_FS_TYPE_WAV;
+    } else {
+        printf("Mismatch: Expected 0x%08X (%s), but got 0x%08X (%s)\n",
+               DIST_FS_RIFF, hex_to_ascii(DIST_FS_RIFF).c_str(),
+               file_chunk_id, ascii_chunk_id.c_str());
+        return DIST_FS_TYPE_UNKNOWN;
+    }
+}
+
 int main(int argc, char *argv[]) {
-  printf("dist-fs app\n\n");
+    printf("dist-fs app\n\n");
 
-  if (argc < 2) {
-    printf("Pass in a file to read...\n");
-    return -1;
-  }
+    if (argc < 2) {
+        printf("Pass in a file to read...\n");
+        return -1;
+    }
 
-  // read in the file (argv[1]) as a binary file
-  std::ifstream audio_file(argv[1]);
-  if (!audio_file) {
-    printf("No such file %s\n", argv[1]);
-  }
+    dist_fs_file_types_e file_type = get_file_type(argv[1]);
 
-  std::vector<char> audio_file_data((std::istreambuf_iterator<char>(audio_file)),
-                              std::istreambuf_iterator<char>());  
-  if (audio_file_data.size() < DIST_FS_RIFF_SZ) {
-    printf("File is too small to contain a valid RIFF header... perhaps this should be different\n");
-  }
-
-  std::cout << "Audio file data: " << std::endl;
-  for (uint8_t i = 0; i < DIST_FS_RIFF_SZ ; i++) {
-    std::cout << audio_file_data[i];
-  }
+    printf("Found file type: %d\n", file_type);
 
 
-  std::string riff = hex_to_ascii(DIST_FS_RIFF);
-
-  printf("RIFF chunk desc: \n");
-  printf("\tChunk ID: 0x%0X (%s) \n", DIST_FS_RIFF, riff.c_str() );
-
-  
-  audio_file.close();
-
-  return 0;
+    return 0;
 }
