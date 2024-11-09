@@ -10,6 +10,7 @@
 
 #include "dist-fs/file_format.hpp"
 
+
 std::string hex_to_ascii(unsigned int hexValue) {
   std::ostringstream oss;
   for (int i = sizeof(hexValue) - 1; i >= 0; --i) {
@@ -19,6 +20,12 @@ std::string hex_to_ascii(unsigned int hexValue) {
     }
   }
   return oss.str();
+}
+
+int get_wav_file(const char *file) {
+  int rc = 0;
+
+  return rc;
 }
 
 dist_fs_file_types_e get_file_type(const char *filename) {
@@ -39,19 +46,29 @@ dist_fs_file_types_e get_file_type(const char *filename) {
 
   // save the file's first 4 bytes, this will determine what kind of file we want
   // to check for
-  uint32_t file_chunk_id = (static_cast<unsigned char>(audio_file_data[0]) << 24) |
-                           (static_cast<unsigned char>(audio_file_data[1]) << 16) |
-                           (static_cast<unsigned char>(audio_file_data[2]) << 8) |
-                           static_cast<unsigned char>(audio_file_data[3]);
+  uint32_t file_chunk_id = (static_cast<uint8_t>(audio_file_data[0]) << 24) |
+                           (static_cast<uint8_t>(audio_file_data[1]) << 16) |
+                           (static_cast<uint8_t>(audio_file_data[2]) << 8) |
+                           static_cast<uint8_t>(audio_file_data[3]);
 
+  // first 4 bytes in ascii
   std::string ascii_chunk_id = hex_to_ascii(file_chunk_id);
   printf("File Chunk ID: 0x%08X (%s)\n", file_chunk_id, ascii_chunk_id.c_str());
 
   // check for RIFF identifier this is most likely to indicate a WAV file
   if (file_chunk_id == DIST_FS_RIFF) {
     printf("RIFF chunk found\n");
-    return DIST_FS_TYPE_WAV;
-  } else {
+    
+    int rc = get_wav_file(filename);
+    if (rc != 0) {
+      return DIST_FS_TYPE_UNKNOWN;
+    }
+    else {
+      return DIST_FS_TYPE_WAV;
+    }
+  }
+  
+  else {
     printf("Mismatch: Expected 0x%08X (%s), but got 0x%08X (%s)\n", DIST_FS_RIFF,
            hex_to_ascii(DIST_FS_RIFF).c_str(), file_chunk_id, ascii_chunk_id.c_str());
     return DIST_FS_TYPE_UNKNOWN;
