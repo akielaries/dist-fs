@@ -26,7 +26,9 @@ can append (add something to the end)
     - https://en.wikipedia.org/wiki/WAV#WAV_file_header
   - [ ] figure out addressing, how to get a chunk of memory allocated to us cleanly
     - how can it grow/shrink? this think shouldn't grow in size unless files get added
-  - [ ] Figure out reading/writing to the samsung SSD I have. 500gb available.
+  - [ ] Figure out reading/writing to the samsung SSD I have
+    - 500gb
+    - This will be the "file system." audio files are large, will need a decent chunk of space
        
 #### Networking
 - [ ] Make the file system available in some way
