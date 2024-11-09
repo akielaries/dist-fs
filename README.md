@@ -3,6 +3,9 @@ Distributed File System (maybe?)
 
 This is a **rough** draft of a project idea for a distributed filesystem that replace our (Chico and I's) need for dropbox.
 
+## Some things for me to do
+- Figure out how to make the raspberry pi accessible from outside my network for chico to talk to
+- Guide to get started
 
 ## Details
 
@@ -23,6 +26,7 @@ can append (add something to the end)
     - https://en.wikipedia.org/wiki/WAV#WAV_file_header
   - [ ] figure out addressing, how to get a chunk of memory allocated to us cleanly
     - how can it grow/shrink? this think shouldn't grow in size unless files get added
+  - [ ] Figure out reading/writing to the samsung SSD I have. 500gb available.
        
 #### Networking
 - [ ] Make the file system available in some way
