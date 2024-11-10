@@ -69,10 +69,9 @@ dist_fs_file_types_e get_file_type(const char *filename) {
       return DIST_FS_TYPE_MP3;
 
     default:
-      LOG(ERR, "Unknown file chunk ID");
+      LOG(ERR, "Unknown file chunk ID: { hex:(0x%08X) ascii:(%s) }",
+          file_chunk_id, ascii_chunk_id.c_str());
 
-      printf("Mismatch: Expected 0x%08X (%s), but got 0x%08X (%s)\n", DIST_FS_RIFF,
-             hex_to_ascii(DIST_FS_RIFF).c_str(), file_chunk_id, ascii_chunk_id.c_str());
       return DIST_FS_TYPE_UNKNOWN;
   }
 }
