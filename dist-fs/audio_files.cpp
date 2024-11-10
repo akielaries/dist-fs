@@ -35,7 +35,7 @@ dist_fs_file_types_e get_file_type(const char *filename) {
     return DIST_FS_TYPE_UNKNOWN;
   }
 
-  LOG(INFO, "File size: {}", audio_file_data.size());
+  LOG(INFO, "File size: %d bytes", audio_file_data.size());
 
   // save the file's first 4 bytes, this will determine what kind of file we want
   // to check for
@@ -48,44 +48,30 @@ dist_fs_file_types_e get_file_type(const char *filename) {
   std::string ascii_chunk_id = hex_to_ascii(file_chunk_id);
   printf("File Chunk ID: 0x%08X (%s)\n", file_chunk_id, ascii_chunk_id.c_str());
 
+
   // based on the first 4 bytes, lets switch case our way thru possible options
   switch (file_chunk_id) {
     case DIST_FS_RIFF:
-      printf("RIFF chunk found - Likely WAV file.\n");
+      LOG(INFO, "RIFF chunk ID found");
       return DIST_FS_TYPE_WAV;
 
     case DIST_FS_FLAC:
-      printf("FLAC chunk found.\n");
+      LOG(INFO, "fLaC chunk ID found");
       return DIST_FS_TYPE_FLAC;
 
     case DIST_FS_AIFF:
-      printf("AIFF chunk found.\n");
+      LOG(INFO, "AIFF chunk ID found");
       return DIST_FS_TYPE_AIFF;
 
     case DIST_FS_MP3:
-      printf("ID3 chunk found - Likely MP3 file.\n");
+      LOG(INFO, "MP3 chunk ID found");
       return DIST_FS_TYPE_MP3;
 
     default:
-      printf("Unknown file chunk ID.\n");
+      LOG(ERR, "Unknown file chunk ID");
+
+      printf("Mismatch: Expected 0x%08X (%s), but got 0x%08X (%s)\n", DIST_FS_RIFF,
+             hex_to_ascii(DIST_FS_RIFF).c_str(), file_chunk_id, ascii_chunk_id.c_str());
       return DIST_FS_TYPE_UNKNOWN;
-  }
-
-  // check for RIFF identifier this is most likely to indicate a WAV file
-  if (file_chunk_id == DIST_FS_RIFF) {
-    printf("RIFF chunk found\n");
-
-    int rc = get_wav_file(filename);
-    if (rc != 0) {
-      return DIST_FS_TYPE_UNKNOWN;
-    } else {
-      return DIST_FS_TYPE_WAV;
-    }
-  }
-
-  else {
-    printf("Mismatch: Expected 0x%08X (%s), but got 0x%08X (%s)\n", DIST_FS_RIFF,
-           hex_to_ascii(DIST_FS_RIFF).c_str(), file_chunk_id, ascii_chunk_id.c_str());
-    return DIST_FS_TYPE_UNKNOWN;
   }
 }

@@ -8,6 +8,20 @@ project(dist-fs)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_compile_options(
+    -Wall                    # Enable all the warnings
+    -Wextra                  # Enable extra warnings
+    -pedantic                # Enable stricter standards compliance
+    -Wshadow                 # Warn about variable shadowing
+    -Wconversion             # Warn about type conversions that may lose data
+    -Wuninitialized          # Warn about uninitialized variables
+    -Wmaybe-uninitialized    # Warn about variables that may be uninitialized
+    -Wcast-align             # Warn about potentially problematic pointer casts
+    -Wunused-variable        # Warn about unused variables
+    -Wunused-parameter       # Warn about unused function parameters
+    -Wnull-dereference       # Warn about dereferencing a null pointer
+)
+
 # Define the root driver file
 set(SOURCES
     dist-fs.cpp

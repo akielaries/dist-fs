@@ -10,6 +10,7 @@
 #include <stdio.h>  // I prefer printf
 
 #include "dist-fs/audio_files.hpp"
+#include "dist-fs/utils.hpp"
 
 
 int main(int argc, char *argv[]) {

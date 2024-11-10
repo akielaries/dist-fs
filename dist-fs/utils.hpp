@@ -7,12 +7,21 @@
 #include <iomanip>
 #include <sstream>
 #include <format>
+#include <cstdarg>
 
-#define INFO 1
-#define WARN 2
-#define ERR  3
+enum log_level_e {
+  INFO,
+  WARN,
+  ERR,
+};
+
+void log(log_level_e level, const char* file, uint16_t line, const char* msg, ...);
 
 /** @brief log level macro */
+#define LOG(level, msg, ...) log(level, __FILE__, __LINE__, msg, ##__VA_ARGS__)
+
+/** @brief log level macro */
+/*
 #define LOG(level, fmt, ...)                                         \
   do {                                                               \
     const char* level_str;                                           \
@@ -26,6 +35,7 @@
               << std::vformat(fmt, std::make_format_args(__VA_ARGS__)) \
               << "\n";                                               \
   } while (0)
+*/
 
 
 std::string hex_to_ascii(uint32_t hexValue);
