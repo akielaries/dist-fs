@@ -3,23 +3,26 @@
 #include <cstdint>
 
 /** some definitions related to the wav file format */
-#define DIST_FS_TYPE_SZ 4
+#define DIST_FS_TYPE_SZ   4
 #define DIST_FS_ID_HEADER 16
 
 
 /* defines for WAV files */
-#define DIST_FS_RIFF 0x52494646
-#define DIST_FS_WAVE 0x57415645
-#define DIST_FS_FMT  0x666d7420
+#define DIST_FS_RIFF 0x52494646 // ASCII: (RIFF)
+#define DIST_FS_WAVE 0x57415645 // ASCII: (WAVE)
+#define DIST_FS_FMT  0x666d7420 // ASCII: (fmt )
 
 /* defines for FLAC files */
-#define DIST_FS_FLAC 0x664C6143
+#define DIST_FS_FLAC 0x664C6143 // ASCII: (fLaC)
 
 /* defines for MP3 files */
-#define DIST_FS_MP3 0x49443304
+#define DIST_FS_MP3 0x49443304 // ASCII: (ID3 )
 
 /* defines for AIFF files */
-#define DIST_FS_AIFF 0x464f524d
+#define DIST_FS_AIFF 0x464f524d // ASCII: (FORM)
+
+/* defines for M4A files */
+#define DIST_FS_M4A 0x4d344120 // ASCII: (M4A )
 
 /** @brief enumeration of file types */
 typedef enum {
@@ -36,19 +39,19 @@ typedef enum {
 
 /** @brief structure for wav file information */
 typedef struct {
-  char  w_fileid[4];              /* chunk id 'RIFF'            */
-  uint32_t w_chunksize;             /* chunk size                 */
-  char  w_waveid[4];              /* wave chunk id 'WAVE'       */
-  char  w_fmtid[4];               /* format chunk id 'fmt '     */
-  uint32_t w_fmtchunksize;          /* format chunk size          */
-  uint16_t  w_fmttag;               /* format tag, 1 for PCM      */
-  uint16_t  w_nchannels;            /* number of channels         */
-  uint32_t w_samplespersec;         /* sample rate in hz          */
-  uint32_t w_navgbytespersec;       /* average bytes per second   */
-  uint16_t  w_nblockalign;          /* number of bytes per sample */
-  uint16_t  w_nbitspersample;       /* number of bits in a sample */
-  char  w_datachunkid[4];         /* data chunk id 'data'       */
-  uint32_t w_datachunksize;         /* length of data chunk       */
+  char w_fileid[4];           /* chunk id 'RIFF'            */
+  uint32_t w_chunksize;       /* chunk size                 */
+  char w_waveid[4];           /* wave chunk id 'WAVE'       */
+  char w_fmtid[4];            /* format chunk id 'fmt '     */
+  uint32_t w_fmtchunksize;    /* format chunk size          */
+  uint16_t w_fmttag;          /* format tag, 1 for PCM      */
+  uint16_t w_nchannels;       /* number of channels         */
+  uint32_t w_samplespersec;   /* sample rate in hz          */
+  uint32_t w_navgbytespersec; /* average bytes per second   */
+  uint16_t w_nblockalign;     /* number of bytes per sample */
+  uint16_t w_nbitspersample;  /* number of bits in a sample */
+  char w_datachunkid[4];      /* data chunk id 'data'       */
+  uint32_t w_datachunksize;   /* length of data chunk       */
 } dist_fs_wav_t;
 
 

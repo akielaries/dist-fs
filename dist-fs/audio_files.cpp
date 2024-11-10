@@ -40,11 +40,12 @@ dist_fs_file_types_e get_file_type(const char *filename) {
   audio_file.seekg(0, std::ios::beg);
   LOG(INFO, "File size: %ld bytes", file_size);
 
-  //char header[DIST_FS_ID_HEADER] = { 0 };
+  // char header[DIST_FS_ID_HEADER] = { 0 };
 
-  std::array<char, DIST_FS_ID_HEADER> header = { 0 };
+  std::array<char, DIST_FS_ID_HEADER> header = {0};
 
-  // snag first few bytes of the file header, enough to identify what we're working with
+  // snag first few bytes of the file header, enough to identify what we're
+  // working with
   audio_file.read(header.data(), DIST_FS_ID_HEADER);
 
   if (audio_file.gcount() < DIST_FS_ID_HEADER) {
@@ -53,19 +54,19 @@ dist_fs_file_types_e get_file_type(const char *filename) {
   }
 
   // extract identifier to a single variable
-    // Extract the first 8 bytes into two 32-bit chunks (lower 4 bytes and upper 4 bytes)
-    uint32_t file_chunk_id_1 = (static_cast<uint8_t>(header[0]) << 24) |
-                               (static_cast<uint8_t>(header[1]) << 16) |
-                               (static_cast<uint8_t>(header[2]) << 8) |
-                               static_cast<uint8_t>(header[3]);
+  uint32_t file_chunk_id_1 = (static_cast<uint8_t>(header[0]) << 24) |
+                             (static_cast<uint8_t>(header[1]) << 16) |
+                             (static_cast<uint8_t>(header[2]) << 8) |
+                             static_cast<uint8_t>(header[3]);
+  uint32_t file_chunk_id_2 = (static_cast<uint8_t>(header[4]) << 24) |
+                             (static_cast<uint8_t>(header[5]) << 16) |
+                             (static_cast<uint8_t>(header[6]) << 8) |
+                             static_cast<uint8_t>(header[7]);
 
-    uint32_t file_chunk_id_2 = (static_cast<uint8_t>(header[4]) << 24) |
-                               (static_cast<uint8_t>(header[5]) << 16) |
-                               (static_cast<uint8_t>(header[6]) << 8) |
-                               static_cast<uint8_t>(header[7]);
-
-    // Combine them into one 64-bit value if needed (optional, if you want to use a single identifier)
-    uint64_t file_chunk_id = (static_cast<uint64_t>(file_chunk_id_1) << 32) | file_chunk_id_2;
+  // Combine them into one 64-bit value if needed (optional, if you want to use
+  // a single identifier)
+  uint64_t file_chunk_id =
+    (static_cast<uint64_t>(file_chunk_id_1) << 32) | file_chunk_id_2;
 
   // first 4 bytes in ascii
   std::string ascii_chunk_id = hex_to_ascii(header);
@@ -91,6 +92,10 @@ dist_fs_file_types_e get_file_type(const char *filename) {
     case DIST_FS_MP3:
       LOG(INFO, "MP3 chunk ID found");
       return DIST_FS_TYPE_MP3;
+
+    case DIST_FS_M4A:
+      LOG(INFO, "M4A chunk ID found");
+      return DIST_FS_TYPE_M4A;
 
     default:
       LOG(ERR,

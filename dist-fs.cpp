@@ -7,7 +7,7 @@
 
 #include <cstdint>
 #include <cstdlib>
-#include <stdio.h>  // I prefer printf
+#include <stdio.h> // I prefer printf
 
 #include "dist-fs/audio_files.hpp"
 #include "dist-fs/utils.hpp"

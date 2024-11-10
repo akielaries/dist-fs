@@ -8,7 +8,7 @@
 
 #include "utils.hpp"
 
-std::string hex_to_ascii(const std::array<char, 16>& header) {
+std::string hex_to_ascii(const std::array<char, 16> &header) {
   std::ostringstream oss;
   for (int i = 0; i < 16; ++i) {
     char ch = header[i];
@@ -19,15 +19,15 @@ std::string hex_to_ascii(const std::array<char, 16>& header) {
 
 std::string hex_to_ascii(uint64_t hex_value) {
   bool big_endian = true;
-    std::ostringstream oss;
-    for (int i = 0; i < 8; ++i) {
-        int shift = big_endian ? (7 - i) * 8 : i * 8;
-        char ch = (hex_value >> shift) & 0xFF;
-        
-        // Convert non-printable characters to '.'
-        oss << (std::isprint(static_cast<unsigned char>(ch)) ? ch : '.');
-    }
-    return oss.str();
+  std::ostringstream oss;
+  for (int i = 0; i < 8; ++i) {
+    int shift = big_endian ? (7 - i) * 8 : i * 8;
+    char ch = (hex_value >> shift) & 0xFF;
+
+    // Convert non-printable characters to '.'
+    oss << (std::isprint(static_cast<unsigned char>(ch)) ? ch : '.');
+  }
+  return oss.str();
 }
 
 std::string hex_to_ascii(uint32_t hex_value) {
