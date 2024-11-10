@@ -39,8 +39,8 @@ void log(log_level_e level, const char* file, uint16_t line , const char* msg, .
   // just the file name, not full path...
   const char* filename = basename(const_cast<char*>(file));
     
-    std::cout << "[" << log_to_str(level) << "] "
-              << filename << ":" << line << " - ";
+  std::cout << "[" << log_to_str(level) << "] "
+            << filename << ":" << line << " - ";
 
   vfprintf(stdout, msg, args);
   std::cout << std::endl;
