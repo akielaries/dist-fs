@@ -17,9 +17,9 @@ make
 
 ## Details
 
-The main idea here to start is to create a simple file system on a Raspberry pi, in memory, and 
+The main idea here to start is to create a simple file system on an external drive from a raspberry pi, and 
 contained in a single process (a single running task on linux). There will then need to be an
-interface to some sort of web interface. It should ideally be encrypted but to start who cares.
+interface to some sort of front end at some point. It should ideally be encrypted but to start who cares.
 To start, we don't care about the "distributed" part, just an accesible common file system we
 can append (add something to the end)
 
