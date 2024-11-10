@@ -16,4 +16,3 @@ std::string hex_to_ascii(uint32_t hexValue) {
   }
   return oss.str();
 }
-
