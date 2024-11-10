@@ -24,9 +24,9 @@ const char* log_to_str(log_level_e level) {
     case INFO:
       return "INFO";
     case WARN:
-      return "WARNING";
+      return "WARN";
     case ERR:
-      return "ERROR";
+      return "ERRO";
     default:
       return "UNKNOWN";
   }

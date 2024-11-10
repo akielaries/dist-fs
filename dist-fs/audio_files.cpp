@@ -8,6 +8,8 @@
 #include <cstdlib>
 #include <stdio.h>
 
+#include <libgen.h>
+
 #include "audio_files.hpp"
 #include "utils.hpp"
 
@@ -18,6 +20,7 @@ int get_wav_file(const char *file) {
 }
 
 dist_fs_file_types_e get_file_type(const char *filename) {
+  LOG(INFO, "Checking file type of file: (%s)",basename(const_cast<char*>(filename)));
   dist_fs_file_types_e file_type;
 
   // read in the audio file
@@ -46,9 +49,7 @@ dist_fs_file_types_e get_file_type(const char *filename) {
 
   // first 4 bytes in ascii
   std::string ascii_chunk_id = hex_to_ascii(file_chunk_id);
-  //printf("File Chunk ID: 0x%08X (%s)\n", file_chunk_id, ascii_chunk_id.c_str());
   LOG(INFO, "File Chunk ID: 0x%08X (%s)", file_chunk_id, ascii_chunk_id.c_str());
-
 
   // based on the first 4 bytes, lets switch case our way thru possible options
   switch (file_chunk_id) {
