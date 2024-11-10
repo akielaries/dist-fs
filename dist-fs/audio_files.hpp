@@ -3,9 +3,18 @@
 /** some definitions related to the wav file format */
 #define DIST_FS_TYPE_SZ 4
 
-#define DIST_FS_RIFF 0x52494646
-#define DIST_FS_WAVE 0x57415645
-#define DIST_FS_FMT  0x666d7420
+
+/* defines for WAV files */
+#define DIST_FS_RIFF  0x52494646
+#define DIST_FS_WAVE  0x57415645
+#define DIST_FS_FMT   0x666d7420
+
+/* defines for FLAC files */
+#define DIST_FS_FLAC  0x664C6143
+
+/* defines for MP3 files */
+#define DIST_FS_MP3   0x49443304
+
 
 /** @brief enumeration of file types */
 typedef enum {
@@ -18,3 +27,6 @@ typedef enum {
   DIST_FS_END,
   DIST_FS_NUM_TYPES = DIST_FS_END - 1,
 } dist_fs_file_types_e;
+
+
+dist_fs_file_types_e get_file_type(const char *filename);

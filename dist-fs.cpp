@@ -5,84 +5,13 @@
 #include <string>
 #include <vector>
 
+#include <cstdint>
 #include <cstdlib>
 #include <stdio.h>  // I prefer printf
 
-#include "dist-fs/file_format.hpp"
+#include "dist-fs/audio_files.hpp"
 
 
-std::string hex_to_ascii(unsigned int hexValue) {
-  std::ostringstream oss;
-  for (int i = sizeof(hexValue) - 1; i >= 0; --i) {
-    char ch = (hexValue >> (i * 8)) & 0xFF;
-    if (ch) {
-      oss << ch;
-    }
-  }
-  return oss.str();
-}
-
-int get_wav_file(const char *file) {
-  int rc = 0;
-
-  return rc;
-}
-
-dist_fs_file_types_e get_file_type(const char *filename) {
-  dist_fs_file_types_e file_type;
-
-  // read in the audio file
-  std::ifstream audio_file(filename, std::ios::binary);
-  if (!audio_file) {
-    printf("No such file %s\n", filename);
-    return DIST_FS_TYPE_UNKNOWN;
-  }
-
-  std::vector<char> audio_file_data((std::istreambuf_iterator<char>(audio_file)),
-                                    std::istreambuf_iterator<char>());
-
-  if (audio_file_data.size() < DIST_FS_TYPE_SZ) {
-    printf("File is too small to contain a valid RIFF header.\n");
-    return DIST_FS_TYPE_UNKNOWN;
-  }
-
-  // save the file's first 4 bytes, this will determine what kind of file we want
-  // to check for
-  uint32_t file_chunk_id = (static_cast<uint8_t>(audio_file_data[0]) << 24) |
-                           (static_cast<uint8_t>(audio_file_data[1]) << 16) |
-                           (static_cast<uint8_t>(audio_file_data[2]) << 8) |
-                           static_cast<uint8_t>(audio_file_data[3]);
-
-  // first 4 bytes in ascii
-  std::string ascii_chunk_id = hex_to_ascii(file_chunk_id);
-  printf("File Chunk ID: 0x%08X (%s)\n", file_chunk_id, ascii_chunk_id.c_str());
-
-  // based on the first 4 bytes, lets switch case our way thru possible options
-  switch (file_type) {
-
-    case 
-
-  }
-
-  // check for RIFF identifier this is most likely to indicate a WAV file
-  if (file_chunk_id == DIST_FS_RIFF) {
-    printf("RIFF chunk found\n");
-    
-    int rc = get_wav_file(filename);
-    if (rc != 0) {
-      return DIST_FS_TYPE_UNKNOWN;
-    }
-    else {
-      return DIST_FS_TYPE_WAV;
-    }
-  }
-  
-  else {
-    printf("Mismatch: Expected 0x%08X (%s), but got 0x%08X (%s)\n", DIST_FS_RIFF,
-           hex_to_ascii(DIST_FS_RIFF).c_str(), file_chunk_id, ascii_chunk_id.c_str());
-    return DIST_FS_TYPE_UNKNOWN;
-  }
-}
 
 int main(int argc, char *argv[]) {
   printf("dist-fs app\n\n");
