@@ -64,6 +64,10 @@ int main(int argc, char *argv[]) {
   int option;
   uint8_t ssd_pattern[DIST_FS_SSD_PATTERN_SZ] = {0};
 
+  // TODO maybe do some initialization around the file passed in.
+  // validate it, get its type, size, etc. and create a struct pointer
+  // with this information
+
   while ((option = getopt(argc, argv, "u:d:D:lS:")) != -1) {
     switch (option) {
       case 'u': // --upload

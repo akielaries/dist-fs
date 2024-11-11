@@ -9,6 +9,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include <libgen.h>
+
 #include "utils.hpp"
 #include "audio_files.hpp"
 #include "storage.hpp"
@@ -22,9 +24,16 @@
 int upload_file(const char *filename) {
   LOG(INFO, "Uploading file: %s", filename);
 
+  // create some struct for file information here
+
   dist_fs_file_types_e file_type = get_file_type(filename);
   
   LOG(INFO, "Got file type: %d", file_type);
+
+
+  LOG(INFO, "Creating FS header");
+  LOG(INFO, "filename : hex:() ascii:(%s)", basename(const_cast<char *>(filename)));
+  LOG(INFO, "");
 
   return 0;
 }
