@@ -10,14 +10,22 @@
 #include <errno.h>
 
 #include "utils.hpp"
+#include "audio_files.hpp"
 #include "storage.hpp"
 
 #define DEVICE_PATH  "/dev/sda"
 #define PATTERN_SIZE 5
 #define BLOCK_SIZE   512
 
+
+/*TODO: I suspect some heavy optimizations will need to be done here */
 int upload_file(const char *filename) {
   LOG(INFO, "Uploading file: %s", filename);
+
+  dist_fs_file_types_e file_type = get_file_type(filename);
+  
+  LOG(INFO, "Got file type: %d", file_type);
+
   return 0;
 }
 
