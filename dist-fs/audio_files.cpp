@@ -25,9 +25,10 @@ int get_wav_file(std::ifstream &file) {
 
   // Read the RIFF header (first 12 bytes)
   // RIFF header is within the first 12 bytes, lets make sure
-  char riff_header[12];
-  file.read(riff_header, 12);
-  if (file.gcount() < 12 || std::string(riff_header, 4) != "RIFF") {
+  char riff_header[DIST_FS_ID_HEADER];
+  file.read(riff_header, DIST_FS_ID_HEADER);
+  if (file.gcount() < DIST_FS_ID_HEADER ||
+      std::string(riff_header, 4) != "RIFF") {
     LOG(ERR, "Missing RIFF header");
     return -1;
   }
@@ -38,7 +39,7 @@ int get_wav_file(std::ifstream &file) {
     return -1;
   }
 
-  LOG(INFO,"Chunk Size : %d", chunk_size);
+  LOG(INFO, "Chunk Size : %d", chunk_size);
 
   // read the chunks...
   while (file) {
@@ -54,9 +55,8 @@ int get_wav_file(std::ifstream &file) {
       break;
 
     std::string chunk(subchunk_id, 4);
-    LOG(WARN, "subchunk: (%s) %d", chunk, subchunk_id);
     // if we encounter the 'fmt ' chunk
-    //if (chunk == hex_to_ascii((uint32_t)DIST_FS_FMT)) {
+    // if (chunk == hex_to_ascii((uint32_t)DIST_FS_FMT)) {
     if (chunk == "fmt ") {
       uint16_t audio_format, num_channels, block_align, bits_per_sample;
       uint32_t sample_rate, byte_rate;
@@ -69,24 +69,27 @@ int get_wav_file(std::ifstream &file) {
                 sizeof(bits_per_sample));
 
       LOG(INFO, "Format subchunk ('%s'): ", chunk.c_str());
-      LOG(INFO,"  Audio Format: %d", audio_format);
-      LOG(INFO,"  Channels: %d", num_channels);
-      LOG(INFO,"  Sample Rate: %d", sample_rate);
-      LOG(INFO,"  Byte Rate: %d", byte_rate);
-      LOG(INFO,"  Block Align: %d", block_align);
-      LOG(INFO,"  Bits per Sample: %d", bits_per_sample);
-    } 
+      LOG(INFO, "  Audio Format: %d", audio_format);
+      LOG(INFO, "  Channels: %d", num_channels);
+      LOG(INFO, "  Sample Rate: %d", sample_rate);
+      LOG(INFO, "  Byte Rate: %d", byte_rate);
+      LOG(INFO, "  Block Align: %d", block_align);
+      LOG(INFO, "  Bits per Sample: %d", bits_per_sample);
+    }
 
     else if (chunk == "data") {
       LOG(INFO, "Data subchunk ('%s')", chunk.c_str());
       LOG(INFO, "  Data Size:  %d", subchunk_size);
       // skip data section. we don't need to do anything with this
       file.seekg(subchunk_size, std::ios::cur);
-    } 
+    }
 
     else {
       // handle optional chunks like INFO and JUNK
-      LOG(INFO, "Optional subchunk ('%s') with size: %d", chunk.c_str(), subchunk_size);
+      LOG(INFO,
+          "Optional subchunk ('%s') with size: %d",
+          chunk.c_str(),
+          subchunk_size);
       // skip
       file.seekg(subchunk_size, std::ios::cur);
     }
@@ -97,9 +100,9 @@ int get_wav_file(std::ifstream &file) {
 
 dist_fs_file_types_e get_file_type(const char *filename) {
   LOG(INFO,
-      "Checking file type of file: (%s)",
+      "Checking format of file: (%s)",
       basename(const_cast<char *>(filename)));
-  //dist_fs_file_types_e file_type;
+  // dist_fs_file_types_e file_type;
 
   // read in the audio file
   std::ifstream audio_file(filename, std::ios::binary);
