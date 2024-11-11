@@ -25,7 +25,6 @@ void log(log_level_e level,
 /** @brief log level macro */
 #define LOG(level, msg, ...) log(level, __FILE__, __LINE__, msg, ##__VA_ARGS__)
 
-
 std::string hex_to_ascii(const std::array<char, 16> &header);
 std::string hex_to_ascii(uint64_t hexValue);
 std::string hex_to_ascii(uint32_t hexValue);

@@ -22,7 +22,8 @@
 #define DIST_FS_AIFF 0x464f524d // ASCII: (FORM)
 
 /* defines for M4A files */
-#define DIST_FS_M4A 0x4d344120 // ASCII: (M4A )
+#define DIST_FS_M4A_HEADER 0x0000001c
+#define DIST_FS_M4A        0x4d344120 // ASCII: (M4A )
 
 /** @brief enumeration of file types */
 typedef enum {

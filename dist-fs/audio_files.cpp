@@ -13,17 +13,93 @@
 #include "audio_files.hpp"
 #include "utils.hpp"
 
-int get_wav_file(const char *file) {
-  int rc = 0;
+// Helper function to print section details
+void print_chunk_info(const std::string &label, uint32_t value) {
+  std::cout << label << ": 0x" << std::hex << std::setw(8) << std::setfill('0')
+            << value << std::dec << " (" << value << ")\n";
+}
 
-  return rc;
+int get_wav_file(std::ifstream &file) {
+  // make sure we're at the start of the file stream
+  file.seekg(0);
+
+  // Read the RIFF header (first 12 bytes)
+  // RIFF header is within the first 12 bytes, lets make sure
+  char riff_header[12];
+  file.read(riff_header, 12);
+  if (file.gcount() < 12 || std::string(riff_header, 4) != "RIFF") {
+    LOG(ERR, "Missing RIFF header");
+    return -1;
+  }
+
+  uint32_t chunk_size = *reinterpret_cast<uint32_t *>(&riff_header[4]);
+  if (std::string(riff_header + 8, 4) != "WAVE") {
+    LOG(ERR, "Missing WAVE format identifier");
+    return -1;
+  }
+
+  LOG(INFO,"Chunk Size : %d", chunk_size);
+
+  // read the chunks...
+  while (file) {
+    char subchunk_id[4];
+    file.read(subchunk_id, 4);
+    if (file.gcount() < 4)
+      break;
+
+
+    uint32_t subchunk_size;
+    file.read(reinterpret_cast<char *>(&subchunk_size), 4);
+    if (file.gcount() < 4)
+      break;
+
+    std::string chunk(subchunk_id, 4);
+    LOG(WARN, "subchunk: (%s) %d", chunk, subchunk_id);
+    // if we encounter the 'fmt ' chunk
+    //if (chunk == hex_to_ascii((uint32_t)DIST_FS_FMT)) {
+    if (chunk == "fmt ") {
+      uint16_t audio_format, num_channels, block_align, bits_per_sample;
+      uint32_t sample_rate, byte_rate;
+      file.read(reinterpret_cast<char *>(&audio_format), sizeof(audio_format));
+      file.read(reinterpret_cast<char *>(&num_channels), sizeof(num_channels));
+      file.read(reinterpret_cast<char *>(&sample_rate), sizeof(sample_rate));
+      file.read(reinterpret_cast<char *>(&byte_rate), sizeof(byte_rate));
+      file.read(reinterpret_cast<char *>(&block_align), sizeof(block_align));
+      file.read(reinterpret_cast<char *>(&bits_per_sample),
+                sizeof(bits_per_sample));
+
+      LOG(INFO, "Format subchunk ('%s'): ", chunk.c_str());
+      LOG(INFO,"  Audio Format: %d", audio_format);
+      LOG(INFO,"  Channels: %d", num_channels);
+      LOG(INFO,"  Sample Rate: %d", sample_rate);
+      LOG(INFO,"  Byte Rate: %d", byte_rate);
+      LOG(INFO,"  Block Align: %d", block_align);
+      LOG(INFO,"  Bits per Sample: %d", bits_per_sample);
+    } 
+
+    else if (chunk == "data") {
+      LOG(INFO, "Data subchunk ('%s')", chunk.c_str());
+      LOG(INFO, "  Data Size:  %d", subchunk_size);
+      // skip data section. we don't need to do anything with this
+      file.seekg(subchunk_size, std::ios::cur);
+    } 
+
+    else {
+      // handle optional chunks like INFO and JUNK
+      LOG(INFO, "Optional subchunk ('%s') with size: %d", chunk.c_str(), subchunk_size);
+      // skip
+      file.seekg(subchunk_size, std::ios::cur);
+    }
+  }
+
+  return 0;
 }
 
 dist_fs_file_types_e get_file_type(const char *filename) {
   LOG(INFO,
       "Checking file type of file: (%s)",
       basename(const_cast<char *>(filename)));
-  dist_fs_file_types_e file_type;
+  //dist_fs_file_types_e file_type;
 
   // read in the audio file
   std::ifstream audio_file(filename, std::ios::binary);
@@ -40,12 +116,8 @@ dist_fs_file_types_e get_file_type(const char *filename) {
   audio_file.seekg(0, std::ios::beg);
   LOG(INFO, "File size: %ld bytes", file_size);
 
-  // char header[DIST_FS_ID_HEADER] = { 0 };
-
+  // file header, first 16 bytes of the file
   std::array<char, DIST_FS_ID_HEADER> header = {0};
-
-  // snag first few bytes of the file header, enough to identify what we're
-  // working with
   audio_file.read(header.data(), DIST_FS_ID_HEADER);
 
   if (audio_file.gcount() < DIST_FS_ID_HEADER) {
@@ -53,7 +125,7 @@ dist_fs_file_types_e get_file_type(const char *filename) {
     return DIST_FS_TYPE_UNKNOWN;
   }
 
-  // extract identifier to a single variable
+  // extract identifier to 2 32 bit variables
   uint32_t file_chunk_id_1 = (static_cast<uint8_t>(header[0]) << 24) |
                              (static_cast<uint8_t>(header[1]) << 16) |
                              (static_cast<uint8_t>(header[2]) << 8) |
@@ -63,8 +135,7 @@ dist_fs_file_types_e get_file_type(const char *filename) {
                              (static_cast<uint8_t>(header[6]) << 8) |
                              static_cast<uint8_t>(header[7]);
 
-  // Combine them into one 64-bit value if needed (optional, if you want to use
-  // a single identifier)
+  // combine chunk IDs into a single 64 bit ID
   uint64_t file_chunk_id =
     (static_cast<uint64_t>(file_chunk_id_1) << 32) | file_chunk_id_2;
 
@@ -75,10 +146,17 @@ dist_fs_file_types_e get_file_type(const char *filename) {
       file_chunk_id,
       ascii_chunk_id.c_str());
 
+  int rc = 0;
   // based on the first 4 bytes, lets switch case our way thru possible options
   switch (file_chunk_id_1) {
     case DIST_FS_RIFF:
       LOG(INFO, "RIFF chunk ID found");
+      // check if this is a valid wav file
+      rc = get_wav_file(audio_file);
+      if (rc != 0) {
+        return DIST_FS_TYPE_UNKNOWN;
+      }
+
       return DIST_FS_TYPE_WAV;
 
     case DIST_FS_FLAC:
@@ -93,7 +171,7 @@ dist_fs_file_types_e get_file_type(const char *filename) {
       LOG(INFO, "MP3 chunk ID found");
       return DIST_FS_TYPE_MP3;
 
-    case DIST_FS_M4A:
+    case DIST_FS_M4A_HEADER:
       LOG(INFO, "M4A chunk ID found");
       return DIST_FS_TYPE_M4A;
 
