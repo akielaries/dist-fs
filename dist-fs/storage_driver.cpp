@@ -30,15 +30,15 @@ int upload_file(const char *filename) {
   rc = get_file_info(file_info, filename);
 
   LOG(INFO, "Creating FS header");
+  LOG(INFO, " start bytes: 0x%8X", DIST_FS_SSD_HEADER);
   LOG(INFO, " file type: %d", file_info.type);
   LOG(INFO, " filename : hex:() ascii:(%s)", file_info.name);
-  LOG(INFO,
-      " file size: %db | %dkb | %dmb | %dgb",
-      file_info.size,
-      (file_info.size / 1024),
-      (file_info.size / 1024) / 1024,
-      ((file_info.size / 1024) / 1024) / 1024);
-  LOG(INFO, " file timestamp: ");
+  LOG(INFO, " file size: %db | %dkb | %dmb | %dgb",
+            file_info.size,
+            (file_info.size / 1024),
+            (file_info.size / 1024) / 1024,
+            ((file_info.size / 1024) / 1024) / 1024);
+  LOG(INFO, " file timestamp: %s", std::ctime(&file_info.timestamp));
 
   return 0;
 }

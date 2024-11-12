@@ -6,7 +6,9 @@
 #include <vector>
 
 #include <cstdlib>
+#include <ctime>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #include <libgen.h>
 
@@ -102,6 +104,19 @@ int get_file_info(file_info_t &file_info, const char *filename) {
   file_info.name = basename(const_cast<char *>(filename));
   LOG(INFO, "Checking format of file: (%s)", file_info.name);
   int rc = 0;
+
+  struct stat file_stat;
+  if (stat(filename, &file_stat) != 0) {
+      LOG(ERR, "Could not retrieve file information for %s\n", filename);
+      return DIST_FS_TYPE_FAILURE;
+  }
+
+  file_info.timestamp = file_stat.st_mtime;
+
+  // convert to string and remove the trailing newline
+  std::string time_str = std::ctime(&file_info.timestamp);
+  // remove new line
+  time_str = time_str.substr(0, time_str.length() - 1);
 
   // read in the audio file
   std::ifstream audio_file(filename, std::ios::binary);

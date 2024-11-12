@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <ctime>
 
 /** some definitions related to the wav file format */
 #define DIST_FS_TYPE_SZ   4
@@ -69,6 +70,7 @@ typedef struct {
   uint64_t size;             // file size in bytes
   dist_fs_file_types_e type; // file type
   uint64_t offset;           // file offset in the drive
+  std::time_t timestamp;
 } file_info_t;
 
 
