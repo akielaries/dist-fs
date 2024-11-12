@@ -25,15 +25,22 @@
 #define DIST_FS_M4A_HEADER 0x0000001c
 #define DIST_FS_M4A        0x4d344120 // ASCII: (M4A )
 
+
+/** @brief enumeration of error codes */
+typedef enum {
+  DIST_FS_TYPE_FAILURE = -1,
+  DIST_FS_TYPE_UNKNOWN = -2,
+} dist_fs_error_codes_e;
+
+
 /** @brief enumeration of file types */
 typedef enum {
-  DIST_FS_TYPE_UNKNOWN,
-  DIST_FS_TYPE_WAV,
-  DIST_FS_TYPE_FLAC,
-  DIST_FS_TYPE_AIFF,
-  DIST_FS_TYPE_M4A,
-  DIST_FS_TYPE_MP3,
-
+  DIST_FS_TYPE_WAV = 0,
+  DIST_FS_TYPE_FLAC = 1,
+  DIST_FS_TYPE_AIFF = 2,
+  DIST_FS_TYPE_M4A = 3,
+  DIST_FS_TYPE_MP3 = 4,
+  /*add more files here*/
   DIST_FS_END,
   DIST_FS_NUM_TYPES = DIST_FS_END - 1,
 } dist_fs_file_types_e;
@@ -55,5 +62,14 @@ typedef struct {
   uint32_t w_datachunksize;   /* length of data chunk       */
 } dist_fs_wav_t;
 
+/** @brief  */
+typedef struct {
+  uint16_t id;               // file ID
+  char *name;                // file name
+  uint64_t size;             // file size in bytes
+  dist_fs_file_types_e type; // file type
+  uint64_t offset;           // file offset in the drive
+} file_info_t;
 
-dist_fs_file_types_e get_file_type(const char *filename);
+
+int get_file_info(file_info_t &file_info, const char *filename);

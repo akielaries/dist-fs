@@ -9,31 +9,36 @@
 #include <string.h>
 #include <errno.h>
 
-#include <libgen.h>
-
 #include "utils.hpp"
 #include "audio_files.hpp"
 #include "storage.hpp"
 
-#define DEVICE_PATH  "/dev/sda"
-#define PATTERN_SIZE 5
-#define BLOCK_SIZE   512
 
+#define DEVICE_PATH "/dev/sda"
+#define BLOCK_SIZE  512
+
+// TODO storage init? fill first 32 bytes of the drive with some device
+// information? I don't want to start storing data at 0, create some buffer
 
 /*TODO: I suspect some heavy optimizations will need to be done here */
 int upload_file(const char *filename) {
   LOG(INFO, "Uploading file: %s", filename);
-
+  int rc = 0;
   // create some struct for file information here
+  file_info_t file_info = {0};
 
-  dist_fs_file_types_e file_type = get_file_type(filename);
-  
-  LOG(INFO, "Got file type: %d", file_type);
-
+  rc = get_file_info(file_info, filename);
 
   LOG(INFO, "Creating FS header");
-  LOG(INFO, "filename : hex:() ascii:(%s)", basename(const_cast<char *>(filename)));
-  LOG(INFO, "");
+  LOG(INFO, " file type: %d", file_info.type);
+  LOG(INFO, " filename : hex:() ascii:(%s)", file_info.name);
+  LOG(INFO,
+      " file size: %db | %dkb | %dmb | %dgb",
+      file_info.size,
+      (file_info.size / 1024),
+      (file_info.size / 1024) / 1024,
+      ((file_info.size / 1024) / 1024) / 1024);
+  LOG(INFO, " file timestamp: ");
 
   return 0;
 }

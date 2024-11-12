@@ -98,23 +98,23 @@ int get_wav_file(std::ifstream &file) {
   return 0;
 }
 
-dist_fs_file_types_e get_file_type(const char *filename) {
-  LOG(INFO,
-      "Checking format of file: (%s)",
-      basename(const_cast<char *>(filename)));
-  // dist_fs_file_types_e file_type;
+int get_file_info(file_info_t &file_info, const char *filename) {
+  file_info.name = basename(const_cast<char *>(filename));
+  LOG(INFO, "Checking format of file: (%s)", file_info.name);
+  int rc = 0;
 
   // read in the audio file
   std::ifstream audio_file(filename, std::ios::binary);
   if (!audio_file) {
     LOG(ERR, "No such file %s\n", filename);
-    return DIST_FS_TYPE_UNKNOWN;
+    return DIST_FS_TYPE_FAILURE;
   }
 
   // move to the end of the stream to get the size, then move the pointer back
   // to start of the stream
   audio_file.seekg(0, std::ios::end);
   std::streamsize file_size = audio_file.tellg();
+  file_info.size = file_size;
   // reset pointer to start of file
   audio_file.seekg(0, std::ios::beg);
   LOG(INFO, "File size: %ld bytes", file_size);
@@ -125,10 +125,10 @@ dist_fs_file_types_e get_file_type(const char *filename) {
 
   if (audio_file.gcount() < DIST_FS_ID_HEADER) {
     LOG(ERR, "File is too small to contain a valid header\n");
-    return DIST_FS_TYPE_UNKNOWN;
+    return DIST_FS_TYPE_FAILURE;
   }
 
-  // extract identifier to 2 32 bit variables
+  // extract identifier to two 32 bit variables
   uint32_t file_chunk_id_1 = (static_cast<uint8_t>(header[0]) << 24) |
                              (static_cast<uint8_t>(header[1]) << 16) |
                              (static_cast<uint8_t>(header[2]) << 8) |
@@ -149,7 +149,6 @@ dist_fs_file_types_e get_file_type(const char *filename) {
       file_chunk_id,
       ascii_chunk_id.c_str());
 
-  int rc = 0;
   // based on the first 4 bytes, lets switch case our way thru possible options
   switch (file_chunk_id_1) {
     case DIST_FS_RIFF:
@@ -160,23 +159,28 @@ dist_fs_file_types_e get_file_type(const char *filename) {
         return DIST_FS_TYPE_UNKNOWN;
       }
 
-      return DIST_FS_TYPE_WAV;
+      file_info.type = DIST_FS_TYPE_WAV;
+      return rc;
 
     case DIST_FS_FLAC:
       LOG(INFO, "fLaC chunk ID found");
-      return DIST_FS_TYPE_FLAC;
+      file_info.type = DIST_FS_TYPE_FLAC;
+      return rc;
 
     case DIST_FS_AIFF:
       LOG(INFO, "AIFF chunk ID found");
-      return DIST_FS_TYPE_AIFF;
+      file_info.type = DIST_FS_TYPE_AIFF;
+      return rc;
 
     case DIST_FS_MP3:
       LOG(INFO, "MP3 chunk ID found");
-      return DIST_FS_TYPE_MP3;
+      file_info.type = DIST_FS_TYPE_MP3;
+      return rc;
 
     case DIST_FS_M4A_HEADER:
       LOG(INFO, "M4A chunk ID found");
-      return DIST_FS_TYPE_M4A;
+      file_info.type = DIST_FS_TYPE_M4A;
+      return rc;
 
     default:
       LOG(ERR,
