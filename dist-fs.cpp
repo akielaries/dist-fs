@@ -19,6 +19,7 @@
 #include "dist-fs/storage.hpp"
 #include "dist-fs/utils.hpp"
 
+
 void print_usage(const char *program_name) {
   printf("Usage: %s [OPTIONS]\n", program_name);
   printf("Options:\n");
@@ -44,7 +45,7 @@ int hex_string_to_bytes(const char *hex_string,
     return -1;
 
   for (size_t i = 0; i < hex_len; i += 2) {
-    unsigned int byte;
+    uint32_t byte;
     if (sscanf(hex_string + i, "%2x", &byte) != 1)
       return -1;
     buffer[i / 2] = (uint8_t)byte;
