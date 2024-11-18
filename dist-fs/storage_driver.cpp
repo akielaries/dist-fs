@@ -9,14 +9,85 @@
 #include <string.h>
 #include <errno.h>
 
+#include <vector>
+#include <cstring>
+
 #include "utils.hpp"
 #include "audio_files.hpp"
 #include "storage.hpp"
 
 #define DEVICE_PATH "/dev/sda"
 
-// TODO storage init? fill first 32 bytes of the drive with some device
-// information? I don't want to start storing data at 0, create some buffer
+// metadata table starts at the very beginning of the drive
+const off_t METADATA_TABLE_OFFSET = 0;
+// max files I want to track for now...
+const size_t MAX_FILES = 1024;
+
+
+struct FileMetadata {
+    char filename[256];  // File name
+    off_t start_offset;  // Start location on SSD
+    size_t size;         // File size in bytes
+};
+
+
+std::vector<FileMetadata> read_metadata_table(int fd) {
+  LOG(INFO, "Reading SSD metadata table");
+    std::vector<FileMetadata> metadata_table;
+
+    if (lseek(fd, METADATA_TABLE_OFFSET, SEEK_SET) == -1) {
+        LOG(ERR, "Error seeking to metadata table");
+        return metadata_table;
+    }
+
+    FileMetadata entry;
+    for (size_t i = 0; i < MAX_FILES; ++i) {
+        ssize_t read_bytes = read(fd, &entry, sizeof(FileMetadata));
+        if (read_bytes != sizeof(FileMetadata)) break;  // End of table or error
+        if (entry.start_offset == 0 && entry.size == 0) break;  // Empty entry
+        metadata_table.push_back(entry);
+    }
+
+    return metadata_table;
+}
+
+bool write_metadata_entry(int fd, const FileMetadata& entry) {
+  LOG(INFO, "Writing metadata entry");
+    if (lseek(fd, METADATA_TABLE_OFFSET, SEEK_END) == -1) {
+        LOG(ERR, "Error seeking to end of metadata table");
+        return false;
+    }
+
+    ssize_t written = write(fd, &entry, sizeof(FileMetadata));
+    if (written != sizeof(FileMetadata)) {
+        LOG(ERR, "Error writing metadata entry");
+        return false;
+    }
+
+    return true;
+}
+
+off_t find_next_free_offset(const std::vector<FileMetadata>& metadata_table) {
+  LOG(INFO, "Finding next free offset for file storage");
+    const off_t METADATA_SIZE = MAX_FILES * sizeof(FileMetadata);
+    LOG(INFO, "Metadata Size        : %d", METADATA_SIZE);
+    LOG(INFO, "Max files            : %d", MAX_FILES);
+    LOG(INFO, "sizeof(FileMetadata) : %d", sizeof(FileMetadata));
+    if (metadata_table.empty()) {
+        // No files, start right after metadata
+        LOG(INFO, "No files, starting right after metadata section");
+        return METADATA_SIZE;
+    }
+
+    // Find the highest end offset among all files
+    off_t max_end_offset = METADATA_SIZE;  // Start after metadata
+    for (const auto& entry : metadata_table) {
+        off_t end_offset = entry.start_offset + entry.size;
+        if (end_offset > max_end_offset) max_end_offset = end_offset;
+    }
+
+    return max_end_offset;
+}
 
 /*TODO: I suspect some heavy optimizations will need to be done here */
 int upload_file(const char *filename) {
@@ -26,6 +97,15 @@ int upload_file(const char *filename) {
   file_info_t file_info = {0};
 
   rc = get_file_info(file_info, filename);
+  // TODO, check rc of get_file_info
+
+  // open SSD
+  int ssd_fd = open(DEVICE_PATH, O_RDWR);
+  if (ssd_fd == -1) {
+    LOG(ERR, "Error opening SSD");
+      return 1;
+  }
+
 
   LOG(INFO, "Creating FS header");
   LOG(INFO, " start bytes: 0x%8X", DIST_FS_SSD_HEADER);
@@ -39,37 +119,17 @@ int upload_file(const char *filename) {
       ((file_info.size / 1024) / 1024) / 1024);
   LOG(INFO, " file timestamp: %s", std::ctime(&file_info.timestamp));
 
+  std::vector<FileMetadata> metadata_table = read_metadata_table(ssd_fd);
+  off_t next_offset = find_next_free_offset(metadata_table);
+  LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
+
+
+
   LOG(INFO, "Writing FS header");
   // write the file system header, start bytes, file type, filename, file
   // size(bytes), timestamp write the audio file Open the file to upload
-  int file_fd = open(filename, O_RDONLY);
-  if (file_fd == -1) {
-    LOG(ERR, "Error opening file: %s", filename);
-    return 1;
-  }
-
-  // allocate a large buffer to "chunkify" the file and writing it
-  unsigned char buffer[4096];        // 4KB buffer
-  off_t offset = DIST_FS_SSD_HEADER; // Start offset in SSD
-  ssize_t read_bytes;
-
-  // read the file in chunks to then write to the SSD
-  while ((read_bytes = read(file_fd, buffer, sizeof(buffer))) > 0) {
-    if (ssd_write(buffer, read_bytes, offset) != 0) {
-      LOG(ERR, "Error writing to SSD");
-      close(file_fd);
-      return 1;
-    }
-    // advance the offset!
-    offset += read_bytes;
-  }
-
-  if (read_bytes == -1) {
-    LOG(ERR, "Error reading file: %s", filename);
-  }
-
-  close(file_fd);
-  return (read_bytes == -1) ? 1 : 0;
+  
+  return 0;
 }
 
 int download_file(const char *filename) {
