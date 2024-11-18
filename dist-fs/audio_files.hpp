@@ -68,7 +68,7 @@ typedef struct {
   char *name;                // file name
   uint64_t size;             // file size in bytes
   dist_fs_file_types_e type; // file type
-  off_t offset;           // file offset in the drive
+  off_t offset;              // file offset in the drive
   std::time_t timestamp;
 } file_info_t;
 

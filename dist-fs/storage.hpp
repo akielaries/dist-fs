@@ -16,3 +16,4 @@ int list_files();
 int ssd_read(unsigned char *buffer, size_t size, off_t offset);
 int ssd_write(const unsigned char *buffer, size_t size, off_t offset);
 int ssd_echo(const uint8_t *pattern);
+int ssd_reset(off_t offset, size_t size);

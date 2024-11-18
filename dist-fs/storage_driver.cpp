@@ -99,8 +99,12 @@ int upload_file(const char *filename) {
   file_info_t file_info = {0};
 
   rc = get_file_info(file_info, filename);
-  // TODO, check rc of get_file_info
-
+  /*
+    if (rc != 0) {
+      LOG(ERR, "Failed to retrieve file info for: %s", filename);
+      return 1;
+    }
+  */
   // open SSD
   int ssd_fd = open(DEVICE_PATH, O_RDWR);
   if (ssd_fd == -1) {
@@ -126,7 +130,24 @@ int upload_file(const char *filename) {
   LOG(INFO, " file offset: %d", file_info.offset);
   LOG(INFO, " file timestamp: %s", std::ctime(&file_info.timestamp));
 
-  LOG(INFO, "Writing FS header");
+  LOG(INFO, "Writing FS header at offset: 0x%08lX", next_offset);
+  uint32_t header = DIST_FS_SSD_HEADER;
+  lseek(ssd_fd, next_offset, SEEK_SET);
+  write(ssd_fd, &header, sizeof(header));
+
+  if (lseek(ssd_fd, next_offset, SEEK_SET) == -1) {
+    LOG(ERR, "Failed to seek to offset 0x%08lX", next_offset);
+    close(ssd_fd);
+    return 1;
+  }
+
+  ssize_t written = write(ssd_fd, &file_info, sizeof(file_info));
+  if (written != sizeof(file_info)) {
+    LOG(ERR, "Failed to write file header");
+    close(ssd_fd);
+    return 1;
+  }
+
 
   // write the file system header, start bytes, file type, filename, file
   // size(bytes), timestamp write the audio file Open the file to upload
@@ -256,6 +277,65 @@ int ssd_echo(const unsigned char *pattern) {
     LOG(INFO, "Echo test failed. Pattern did not match");
   }
 
+  close(fd);
+  return 0;
+}
+
+int ssd_reset(off_t offset, size_t size) {
+  // Use std::vector to dynamically allocate a buffer with the desired size
+  std::vector<unsigned char> reset_buffer(size,
+                                          0); // Initialize buffer with zeroes
+
+  // Open the device
+  int fd = open(DEVICE_PATH, O_RDWR);
+  if (fd == -1) {
+    LOG(ERR, "Error opening device");
+    return 1;
+  }
+
+  // Seek to the specified offset
+  if (lseek(fd, offset, SEEK_SET) == -1) {
+    LOG(ERR, "Error seeking to offset %ld in device", offset);
+    close(fd);
+    return 1;
+  }
+
+  // Write the zeroed buffer to reset the section
+  ssize_t written = write(fd,
+                          reset_buffer.data(),
+                          size); // Use .data() to get a pointer to the buffer
+  if (written == -1) {
+    LOG(ERR, "Error writing to device at offset %ld", offset);
+    close(fd);
+    return 1;
+  }
+
+  LOG(INFO, "Reset %zu bytes at offset %ld", size, offset);
+
+  // Optionally, read back to verify reset (not required for reset
+  // functionality)
+  std::vector<unsigned char> verify_buffer(size);
+  if (lseek(fd, offset, SEEK_SET) == -1) {
+    LOG(ERR, "Error seeking to offset %ld for verification", offset);
+    close(fd);
+    return 1;
+  }
+
+  ssize_t read_bytes =
+    read(fd, verify_buffer.data(), size); // Use .data() here as well
+  if (read_bytes == -1) {
+    LOG(ERR, "Error reading from device at offset %ld", offset);
+    close(fd);
+    return 1;
+  }
+
+  if (memcmp(reset_buffer.data(), verify_buffer.data(), size) == 0) {
+    LOG(INFO, "Reset verification successful. Region reset to zeroes.");
+  } else {
+    LOG(INFO, "Reset verification failed. Region not reset as expected.");
+  }
+
+  // Close the file descriptor
   close(fd);
   return 0;
 }

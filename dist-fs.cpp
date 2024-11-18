@@ -30,12 +30,16 @@ void print_usage(const char *program_name) {
   printf("  -l, --list               List all files on the SSD\n");
   printf("  -S, --ssd_echo <pattern> Perform an echo test on the SSD with a "
          "specified hex pattern (up to 16 bytes)\n");
+  printf("  -r, --reset <offset> <size> Reset a section of the SSD starting at "
+         "the specified offset with the given size\n");
   printf("\nExamples:\n");
   printf("  %s --upload example.wav\n", program_name);
   printf("  %s --ssd_echo ABABABAB\n", program_name);
+  printf("  %s --reset 1024 512\n", program_name);
   printf("\nNote: <file> must be specified for upload, download, and delete "
          "operations.\n");
 }
+
 
 int hex_string_to_bytes(const char *hex_string,
                         uint8_t *buffer,
@@ -64,12 +68,10 @@ int main(int argc, char *argv[]) {
 
   int option;
   uint8_t ssd_pattern[DIST_FS_SSD_PATTERN_SZ] = {0};
+  off_t reset_offset = 0;
+  size_t reset_size = 0;
 
-  // TODO maybe do some initialization around the file passed in.
-  // validate it, get its type, size, etc. and create a struct pointer
-  // with this information
-
-  while ((option = getopt(argc, argv, "u:d:D:lS:")) != -1) {
+  while ((option = getopt(argc, argv, "u:d:D:lS:r:")) != -1) {
     switch (option) {
       case 'u': // --upload
         if (optarg == NULL) {
@@ -111,6 +113,46 @@ int main(int argc, char *argv[]) {
         }
         ssd_echo(ssd_pattern);
         break;
+
+      case 'r': // --reset
+        // TODO(akiel): this is a BUG!!!! FIXME
+        if (optind + 1 >= argc) {
+          LOG(ERR, "Option -r requires both <offset> and <size> arguments.");
+          print_usage(argv[0]);
+          return -1;
+        }
+
+        // ensure valid argument is available for offset
+        if (argv[optind] == NULL) {
+          LOG(ERR, "Missing offset argument for --reset");
+          return -1;
+        }
+
+        // parse offset in hexadecimal (0x...)
+        reset_offset = strtol(argv[optind++], NULL, 16);
+        if (reset_offset == 0 && strcmp(argv[optind - 1], "0") != 0) {
+          LOG(ERR, "Invalid offset for --reset: %s", argv[optind - 1]);
+          return -1;
+        }
+
+        // ensure valid argument is available for size
+        if (argv[optind] == NULL) {
+          LOG(ERR, "Missing size argument for --reset");
+          return -1;
+        }
+
+        // parse size in decimal
+        reset_size = strtol(argv[optind++], NULL, 10);
+        if (reset_size == 0) {
+          LOG(ERR, "Invalid size for --reset: %s", argv[optind - 1]);
+          return -1;
+        }
+
+        // call the reset function
+        ssd_reset(reset_offset, reset_size);
+        break;
+
+
       default:
         LOG(ERR, "Unknown option: -%c", option);
         print_usage(argv[0]);

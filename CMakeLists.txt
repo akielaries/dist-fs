@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(
+    -g
     -Wall                    # Enable all the warnings
     -Wextra                  # Enable extra warnings
     -pedantic                # Enable stricter standards compliance
