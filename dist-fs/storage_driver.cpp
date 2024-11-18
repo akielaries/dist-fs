@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <endian.h>
 
 #include <vector>
 #include <cstring>
@@ -131,11 +132,11 @@ int upload_file(const char *filename) {
   LOG(INFO, " file timestamp: %s", std::ctime(&file_info.timestamp));
 
   LOG(INFO, "Writing FS header at offset: 0x%08lX", next_offset);
-  uint32_t header = DIST_FS_SSD_HEADER;
+  uint32_t header_be = htobe32(DIST_FS_SSD_HEADER);
   lseek(ssd_fd, next_offset, SEEK_SET);
-  write(ssd_fd, &header, sizeof(header));
+  write(ssd_fd, &header_be, sizeof(header_be));
 
-  if (lseek(ssd_fd, next_offset, SEEK_SET) == -1) {
+  if (lseek(ssd_fd, next_offset + 4, SEEK_SET) == -1) {
     LOG(ERR, "Failed to seek to offset 0x%08lX", next_offset);
     close(ssd_fd);
     return 1;
