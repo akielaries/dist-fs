@@ -13,6 +13,8 @@
 #include <vector>
 #include <cstring>
 
+#include <chrono>
+
 #include "utils.hpp"
 #include "audio_files.hpp"
 #include "storage.hpp"
@@ -149,9 +151,56 @@ int upload_file(const char *filename) {
     return 1;
   }
 
+  // open the file for upload
+  int file_fd = open(filename, O_RDONLY);
+  if (file_fd == -1) {
+    LOG(ERR, "Error opening file: %s", filename);
+    close(ssd_fd);
+    return 1;
+  }
 
-  // write the file system header, start bytes, file type, filename, file
-  // size(bytes), timestamp write the audio file Open the file to upload
+  // allocates a 4kb buffer
+  char buffer[4096];
+  ssize_t bytes_read, bytes_written;
+  
+  // keep track of upload time
+  auto start_time = std::chrono::high_resolution_clock::now();
+
+  LOG(INFO, "Writing file data to SSD at offset: 0x%08lX", file_info.offset + sizeof(header_be) + sizeof(file_info));
+
+  // move the offset to the correct position for writing the file content
+  lseek(ssd_fd, file_info.offset + sizeof(header_be) + sizeof(file_info), SEEK_SET);
+
+  off_t total_bytes_written = 0;
+
+  // read the file and write to the SSD
+  while ((bytes_read = read(file_fd, buffer, sizeof(buffer))) > 0) {
+    bytes_written = write(ssd_fd, buffer, bytes_read);
+    if (bytes_written != bytes_read) {
+      LOG(ERR, "Failed to write file data to SSD");
+      close(file_fd);
+      close(ssd_fd);
+      return 1;
+    }
+    total_bytes_written += bytes_written;
+  }
+  auto end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end_time - start_time;
+
+  if (bytes_read == -1) {
+    LOG(ERR, "Error reading file: %s", filename);
+  }
+
+  //  upload speed (bytes per second)
+  //double upload_speed = total_bytes_written / duration.count();
+  double upload_speed = static_cast<double>(total_bytes_written) / duration.count();
+  LOG(INFO, "Total bytes written: %ld", total_bytes_written);
+  LOG(INFO, "Upload time: %.2f seconds", duration.count());
+  LOG(INFO, "Upload speed: %.2f bytes per second", upload_speed);
+
+  // close both file descriptors
+  close(file_fd);
+  close(ssd_fd);
 
   return 0;
 }
