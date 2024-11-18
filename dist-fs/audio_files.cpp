@@ -107,8 +107,8 @@ int get_file_info(file_info_t &file_info, const char *filename) {
 
   struct stat file_stat;
   if (stat(filename, &file_stat) != 0) {
-      LOG(ERR, "Could not retrieve file information for %s\n", filename);
-      return DIST_FS_TYPE_FAILURE;
+    LOG(ERR, "Could not retrieve file information for %s\n", filename);
+    return DIST_FS_TYPE_FAILURE;
   }
 
   file_info.timestamp = file_stat.st_mtime;
