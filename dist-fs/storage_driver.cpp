@@ -162,14 +162,18 @@ int upload_file(const char *filename) {
   // allocates a 4kb buffer
   char buffer[4096];
   ssize_t bytes_read, bytes_written;
-  
+
   // keep track of upload time
   auto start_time = std::chrono::high_resolution_clock::now();
 
-  LOG(INFO, "Writing file data to SSD at offset: 0x%08lX", file_info.offset + sizeof(header_be) + sizeof(file_info));
+  LOG(INFO,
+      "Writing file data to SSD at offset: 0x%08lX",
+      file_info.offset + sizeof(header_be) + sizeof(file_info));
 
   // move the offset to the correct position for writing the file content
-  lseek(ssd_fd, file_info.offset + sizeof(header_be) + sizeof(file_info), SEEK_SET);
+  lseek(ssd_fd,
+        file_info.offset + sizeof(header_be) + sizeof(file_info),
+        SEEK_SET);
 
   off_t total_bytes_written = 0;
 
@@ -192,11 +196,11 @@ int upload_file(const char *filename) {
   }
 
   //  upload speed (bytes per second)
-  //double upload_speed = total_bytes_written / duration.count();
-  double upload_speed = static_cast<double>(total_bytes_written) / duration.count();
+  double upload_speed =
+    static_cast<double>(total_bytes_written) / duration.count();
   LOG(INFO, "Total bytes written: %ld", total_bytes_written);
   LOG(INFO, "Upload time: %.2f seconds", duration.count());
-  LOG(INFO, "Upload speed: %.2f bytes per second", upload_speed);
+  LOG(INFO, "Upload speed: %.2f kbps", upload_speed / 1024);
 
   // close both file descriptors
   close(file_fd);
