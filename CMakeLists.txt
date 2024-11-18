@@ -20,6 +20,7 @@ add_compile_options(
     -Wunused-variable        # Warn about unused variables
     -Wunused-parameter       # Warn about unused function parameters
     -Wnull-dereference       # Warn about dereferencing a null pointer
+    #-O3                      # the compiler is better at optimizing than me
 )
 
 # Define the root driver file

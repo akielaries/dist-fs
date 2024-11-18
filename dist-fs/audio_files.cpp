@@ -15,6 +15,9 @@
 #include "audio_files.hpp"
 #include "utils.hpp"
 
+
+//#define DEBUG_PRINT 0
+
 // Helper function to print section details
 void print_chunk_info(const std::string &label, uint32_t value) {
   std::cout << label << ": 0x" << std::hex << std::setw(8) << std::setfill('0')
@@ -69,7 +72,7 @@ int get_wav_file(std::ifstream &file) {
       file.read(reinterpret_cast<char *>(&block_align), sizeof(block_align));
       file.read(reinterpret_cast<char *>(&bits_per_sample),
                 sizeof(bits_per_sample));
-
+#ifdef DEBUG_PRINT
       LOG(INFO, "Format subchunk ('%s'): ", chunk.c_str());
       LOG(INFO, "  Audio Format: %d", audio_format);
       LOG(INFO, "  Channels: %d", num_channels);
@@ -77,21 +80,26 @@ int get_wav_file(std::ifstream &file) {
       LOG(INFO, "  Byte Rate: %d", byte_rate);
       LOG(INFO, "  Block Align: %d", block_align);
       LOG(INFO, "  Bits per Sample: %d", bits_per_sample);
+#endif
     }
 
     else if (chunk == "data") {
+#ifdef DEBUG_PRINT
       LOG(INFO, "Data subchunk ('%s')", chunk.c_str());
       LOG(INFO, "  Data Size:  %d", subchunk_size);
+#endif
       // skip data section. we don't need to do anything with this
       file.seekg(subchunk_size, std::ios::cur);
     }
 
     else {
       // handle optional chunks like INFO and JUNK
+#ifdef DEBUG_PRINT
       LOG(INFO,
           "Optional subchunk ('%s') with size: %d",
           chunk.c_str(),
           subchunk_size);
+#endif
       // skip
       file.seekg(subchunk_size, std::ios::cur);
     }
