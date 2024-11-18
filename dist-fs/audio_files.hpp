@@ -65,13 +65,11 @@ typedef struct {
 
 /** @brief  */
 typedef struct {
-  uint16_t id;               // file ID
   char *name;                // file name
   uint64_t size;             // file size in bytes
   dist_fs_file_types_e type; // file type
-  uint64_t offset;           // file offset in the drive
+  off_t offset;           // file offset in the drive
   std::time_t timestamp;
 } file_info_t;
-
 
 int get_file_info(file_info_t &file_info, const char *filename);

@@ -24,69 +24,71 @@ const off_t METADATA_TABLE_OFFSET = 0;
 const size_t MAX_FILES = 1024;
 
 
-struct FileMetadata {
-    char filename[256];  // File name
-    off_t start_offset;  // Start location on SSD
-    size_t size;         // File size in bytes
-};
+typedef struct {
+  char filename[256]; // File name
+  off_t start_offset; // Start location on SSD
+  size_t size;        // File size in bytes
+} ssd_metadata_t;
 
 
-std::vector<FileMetadata> read_metadata_table(int fd) {
+std::vector<ssd_metadata_t> read_metadata_table(int fd) {
   LOG(INFO, "Reading SSD metadata table");
-    std::vector<FileMetadata> metadata_table;
+  std::vector<ssd_metadata_t> metadata_table;
 
-    if (lseek(fd, METADATA_TABLE_OFFSET, SEEK_SET) == -1) {
-        LOG(ERR, "Error seeking to metadata table");
-        return metadata_table;
-    }
-
-    FileMetadata entry;
-    for (size_t i = 0; i < MAX_FILES; ++i) {
-        ssize_t read_bytes = read(fd, &entry, sizeof(FileMetadata));
-        if (read_bytes != sizeof(FileMetadata)) break;  // End of table or error
-        if (entry.start_offset == 0 && entry.size == 0) break;  // Empty entry
-        metadata_table.push_back(entry);
-    }
-
+  if (lseek(fd, METADATA_TABLE_OFFSET, SEEK_SET) == -1) {
+    LOG(ERR, "Error seeking to metadata table");
     return metadata_table;
+  }
+
+  ssd_metadata_t entry;
+  for (size_t i = 0; i < MAX_FILES; ++i) {
+    ssize_t read_bytes = read(fd, &entry, sizeof(ssd_metadata_t));
+    if (read_bytes != sizeof(ssd_metadata_t))
+      break; // end of table or error?
+    if (entry.start_offset == 0 && entry.size == 0)
+      break; // empty entry?
+    metadata_table.push_back(entry);
+  }
+
+  return metadata_table;
 }
 
-bool write_metadata_entry(int fd, const FileMetadata& entry) {
+bool write_metadata_entry(int fd, const ssd_metadata_t &entry) {
   LOG(INFO, "Writing metadata entry");
-    if (lseek(fd, METADATA_TABLE_OFFSET, SEEK_END) == -1) {
-        LOG(ERR, "Error seeking to end of metadata table");
-        return false;
-    }
+  if (lseek(fd, METADATA_TABLE_OFFSET, SEEK_END) == -1) {
+    LOG(ERR, "Error seeking to end of metadata table");
+    return false;
+  }
 
-    ssize_t written = write(fd, &entry, sizeof(FileMetadata));
-    if (written != sizeof(FileMetadata)) {
-        LOG(ERR, "Error writing metadata entry");
-        return false;
-    }
+  ssize_t written = write(fd, &entry, sizeof(ssd_metadata_t));
+  if (written != sizeof(ssd_metadata_t)) {
+    LOG(ERR, "Error writing metadata entry");
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
-off_t find_next_free_offset(const std::vector<FileMetadata>& metadata_table) {
+off_t find_next_free_offset(const std::vector<ssd_metadata_t> &metadata_table) {
   LOG(INFO, "Finding next free offset for file storage");
-    const off_t METADATA_SIZE = MAX_FILES * sizeof(FileMetadata);
-    LOG(INFO, "Metadata Size        : %d", METADATA_SIZE);
-    LOG(INFO, "Max files            : %d", MAX_FILES);
-    LOG(INFO, "sizeof(FileMetadata) : %d", sizeof(FileMetadata));
-    if (metadata_table.empty()) {
-        // No files, start right after metadata
-        LOG(INFO, "No files, starting right after metadata section");
-        return METADATA_SIZE;
-    }
+  const off_t METADATA_SIZE = MAX_FILES * sizeof(ssd_metadata_t);
+  LOG(INFO, "Metadata Size        : %d", METADATA_SIZE);
+  LOG(INFO, "Max files            : %d", MAX_FILES);
+  LOG(INFO, "sizeof(ssd_metadata_t) : %d", sizeof(ssd_metadata_t));
+  if (metadata_table.empty()) {
+    LOG(INFO, "No files, starting right after metadata section");
+    return METADATA_SIZE;
+  }
 
-    // Find the highest end offset among all files
-    off_t max_end_offset = METADATA_SIZE;  // Start after metadata
-    for (const auto& entry : metadata_table) {
-        off_t end_offset = entry.start_offset + entry.size;
-        if (end_offset > max_end_offset) max_end_offset = end_offset;
-    }
-
-    return max_end_offset;
+  // start searching after the metadata section
+  off_t max_end_offset = METADATA_SIZE;
+  // find the highest end offset among all files
+  for (const auto &entry : metadata_table) {
+    off_t end_offset = entry.start_offset + entry.size;
+    if (end_offset > max_end_offset)
+      max_end_offset = end_offset;
+  }
+  return max_end_offset;
 }
 
 /*TODO: I suspect some heavy optimizations will need to be done here */
@@ -103,13 +105,16 @@ int upload_file(const char *filename) {
   int ssd_fd = open(DEVICE_PATH, O_RDWR);
   if (ssd_fd == -1) {
     LOG(ERR, "Error opening SSD");
-      return 1;
+    return 1;
   }
 
+  std::vector<ssd_metadata_t> metadata_table = read_metadata_table(ssd_fd);
+  off_t next_offset = find_next_free_offset(metadata_table);
+  file_info.offset = next_offset;
+  LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
 
   LOG(INFO, "Creating FS header");
   LOG(INFO, " start bytes: 0x%8X", DIST_FS_SSD_HEADER);
-  LOG(INFO, " file type: %d", file_info.type);
   LOG(INFO, " filename : hex:() ascii:(%s)", file_info.name);
   LOG(INFO,
       " file size: %db | %dkb | %dmb | %dgb",
@@ -117,18 +122,15 @@ int upload_file(const char *filename) {
       (file_info.size / 1024),
       (file_info.size / 1024) / 1024,
       ((file_info.size / 1024) / 1024) / 1024);
+  LOG(INFO, " file type: %d", file_info.type);
+  LOG(INFO, " file offset: %d", file_info.offset);
   LOG(INFO, " file timestamp: %s", std::ctime(&file_info.timestamp));
 
-  std::vector<FileMetadata> metadata_table = read_metadata_table(ssd_fd);
-  off_t next_offset = find_next_free_offset(metadata_table);
-  LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
-
-
-
   LOG(INFO, "Writing FS header");
+
   // write the file system header, start bytes, file type, filename, file
   // size(bytes), timestamp write the audio file Open the file to upload
-  
+
   return 0;
 }
 
