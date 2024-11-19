@@ -259,6 +259,12 @@ int delete_file(const char *filename) {
 
 int list_files() {
   LOG(INFO, "Listing all files on the drive");
+
+  LOG(INFO, "Searching through the metadata table");
+  
+  LOG(INFO, "For each file, list it's name, size, and offset on the SSD");
+
+
   return 0;
 }
 
