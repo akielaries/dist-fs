@@ -28,55 +28,71 @@ const size_t MAX_FILES = 1024;
 
 
 typedef struct {
-  char filename[256]; // File name
-  off_t start_offset; // Start location on SSD
-  size_t size;        // File size in bytes
+  char filename[256]; // name
+  off_t start_offset; // offset on ssd
+  size_t size;        // file size in bytes
 } ssd_metadata_t;
 
 
-std::vector<ssd_metadata_t> read_metadata_table(int fd) {
+std::vector<ssd_metadata_t> read_metadata_table(int ssd_fd) {
   LOG(INFO, "Reading SSD metadata table");
   std::vector<ssd_metadata_t> metadata_table;
 
-  if (lseek(fd, METADATA_TABLE_OFFSET, SEEK_SET) == -1) {
-    LOG(ERR, "Error seeking to metadata table");
+  // Seek to the start of the metadata table
+  if (lseek(ssd_fd, 0, SEEK_SET) == -1) {
+    LOG(ERR, "Failed to seek to metadata table");
     return metadata_table;
   }
 
-  ssd_metadata_t entry;
-  for (size_t i = 0; i < MAX_FILES; ++i) {
-    ssize_t read_bytes = read(fd, &entry, sizeof(ssd_metadata_t));
-    if (read_bytes != sizeof(ssd_metadata_t))
-      break; // end of table or error?
-    if (entry.start_offset == 0 && entry.size == 0)
-      break; // empty entry?
-    metadata_table.push_back(entry);
+  // Read the metadata section
+  char buffer[278528] = {0};
+  ssize_t bytes_read = read(ssd_fd, buffer, 278528);
+  if (bytes_read <= 0) {
+    LOG(INFO, "No metadata found. Initializing empty table.");
+    return metadata_table;
+  }
+
+  // Parse metadata entries
+  ssd_metadata_t* entries = reinterpret_cast<ssd_metadata_t*>(buffer);
+  size_t num_entries = bytes_read / sizeof(ssd_metadata_t);
+
+  for (size_t i = 0; i < num_entries; ++i) {
+    if (entries[i].start_offset != 0) { // Valid entry check
+      metadata_table.push_back(entries[i]);
+    }
   }
 
   return metadata_table;
+
 }
 
-bool write_metadata_entry(int fd, const ssd_metadata_t &entry) {
-  LOG(INFO, "Writing metadata entry");
-  if (lseek(fd, METADATA_TABLE_OFFSET, SEEK_END) == -1) {
-    LOG(ERR, "Error seeking to end of metadata table");
-    return false;
-  }
+bool write_metadata_entry(int ssd_fd, const ssd_metadata_t &entry, size_t index) {
+    off_t entry_offset = METADATA_TABLE_OFFSET + (index * sizeof(ssd_metadata_t));
+    LOG(INFO, "Writing metadata entry at offset: 0x%08lX", entry_offset);
 
-  ssize_t written = write(fd, &entry, sizeof(ssd_metadata_t));
-  if (written != sizeof(ssd_metadata_t)) {
-    LOG(ERR, "Error writing metadata entry");
-    return false;
-  }
+    // Seek to the metadata entry offset
+    if (lseek(ssd_fd, entry_offset, SEEK_SET) == -1) {
+        LOG(ERR, "Failed to seek to metadata offset: 0x%08lX", entry_offset);
+        return false;
+    }
 
-  return true;
+    // Write the metadata entry
+    ssize_t written = write(ssd_fd, &entry, sizeof(entry));
+    if (written != sizeof(entry)) {
+        LOG(ERR, "Error writing metadata entry. Expected %lu bytes, wrote %ld bytes",
+            sizeof(entry), written);
+        return false;
+    }
+
+    LOG(INFO, "Successfully wrote metadata entry at offset: 0x%08lX", entry_offset);
+    return true;
 }
 
 off_t find_next_free_offset(const std::vector<ssd_metadata_t> &metadata_table) {
   LOG(INFO, "Finding next free offset for file storage");
   const off_t METADATA_SIZE = MAX_FILES * sizeof(ssd_metadata_t);
-  LOG(INFO, "Metadata Size        : %d", METADATA_SIZE);
-  LOG(INFO, "Max files            : %d", MAX_FILES);
+  LOG(INFO, "Metadata Size          : %d", METADATA_SIZE);
+  LOG(INFO, "Max files              : %d", MAX_FILES);
   LOG(INFO, "sizeof(ssd_metadata_t) : %d", sizeof(ssd_metadata_t));
   if (metadata_table.empty()) {
     LOG(INFO, "No files, starting right after metadata section");
@@ -202,13 +218,20 @@ int upload_file(const char *filename) {
   LOG(INFO, "Upload time: %.2f seconds", duration.count());
   LOG(INFO, "Upload speed: %.2f kbps", upload_speed / 1024);
 
-  LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
   ssd_metadata_t new_entry = {};
   strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
-  new_entry.start_offset = find_next_free_offset(metadata_table);
+  new_entry.start_offset = file_info.offset;
   new_entry.size = file_info.size;
-  if (!write_metadata_entry(ssd_fd, new_entry)) {
-      LOG(ERR, "Error updating metadata");
+
+  LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
+  LOG(INFO, " start_offset : %d", new_entry.start_offset);
+  LOG(INFO, " size         : %d", new_entry.size);
+  
+  size_t index = metadata_table.size();
+  LOG(INFO, "Metadata table size : %d", index);
+  if (!write_metadata_entry(ssd_fd, new_entry, index)) {
+    LOG(ERR, "Failed to write metadata entry for file: %s", filename);
+    return 1;
   }
 
 
