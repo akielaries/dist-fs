@@ -53,7 +53,7 @@ std::vector<ssd_metadata_t> read_metadata_table(int ssd_fd) {
   }
 
   // Parse metadata entries
-  ssd_metadata_t* entries = reinterpret_cast<ssd_metadata_t*>(buffer);
+  ssd_metadata_t *entries = reinterpret_cast<ssd_metadata_t *>(buffer);
   size_t num_entries = bytes_read / sizeof(ssd_metadata_t);
 
   for (size_t i = 0; i < num_entries; ++i) {
@@ -63,29 +63,34 @@ std::vector<ssd_metadata_t> read_metadata_table(int ssd_fd) {
   }
 
   return metadata_table;
-
 }
 
-bool write_metadata_entry(int ssd_fd, const ssd_metadata_t &entry, size_t index) {
-    off_t entry_offset = METADATA_TABLE_OFFSET + (index * sizeof(ssd_metadata_t));
-    LOG(INFO, "Writing metadata entry at offset: 0x%08lX", entry_offset);
+bool write_metadata_entry(int ssd_fd,
+                          const ssd_metadata_t &entry,
+                          size_t index) {
+  off_t entry_offset = METADATA_TABLE_OFFSET + (index * sizeof(ssd_metadata_t));
+  LOG(INFO, "Writing metadata entry at offset: 0x%08lX", entry_offset);
 
-    // Seek to the metadata entry offset
-    if (lseek(ssd_fd, entry_offset, SEEK_SET) == -1) {
-        LOG(ERR, "Failed to seek to metadata offset: 0x%08lX", entry_offset);
-        return false;
-    }
+  // Seek to the metadata entry offset
+  if (lseek(ssd_fd, entry_offset, SEEK_SET) == -1) {
+    LOG(ERR, "Failed to seek to metadata offset: 0x%08lX", entry_offset);
+    return false;
+  }
 
-    // Write the metadata entry
-    ssize_t written = write(ssd_fd, &entry, sizeof(entry));
-    if (written != sizeof(entry)) {
-        LOG(ERR, "Error writing metadata entry. Expected %lu bytes, wrote %ld bytes",
-            sizeof(entry), written);
-        return false;
-    }
+  // Write the metadata entry
+  ssize_t written = write(ssd_fd, &entry, sizeof(entry));
+  if (written != sizeof(entry)) {
+    LOG(ERR,
+        "Error writing metadata entry. Expected %lu bytes, wrote %ld bytes",
+        sizeof(entry),
+        written);
+    return false;
+  }
 
-    LOG(INFO, "Successfully wrote metadata entry at offset: 0x%08lX", entry_offset);
-    return true;
+  LOG(INFO,
+      "Successfully wrote metadata entry at offset: 0x%08lX",
+      entry_offset);
+  return true;
 }
 
 off_t find_next_free_offset(const std::vector<ssd_metadata_t> &metadata_table) {
@@ -226,7 +231,7 @@ int upload_file(const char *filename) {
   LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
   LOG(INFO, " start_offset : %d", new_entry.start_offset);
   LOG(INFO, " size         : %d", new_entry.size);
-  
+
   size_t index = metadata_table.size();
   LOG(INFO, "Metadata table size : %d", index);
   if (!write_metadata_entry(ssd_fd, new_entry, index)) {
