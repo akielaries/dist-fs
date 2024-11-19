@@ -159,7 +159,7 @@ int upload_file(const char *filename) {
     return 1;
   }
 
-  // allocates a 4kb buffer
+  // a 4kb buffer to chunkify the upload
   char buffer[4096];
   ssize_t bytes_read, bytes_written;
 
@@ -201,6 +201,16 @@ int upload_file(const char *filename) {
   LOG(INFO, "Total bytes written: %ld", total_bytes_written);
   LOG(INFO, "Upload time: %.2f seconds", duration.count());
   LOG(INFO, "Upload speed: %.2f kbps", upload_speed / 1024);
+
+  LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
+  ssd_metadata_t new_entry = {};
+  strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
+  new_entry.start_offset = find_next_free_offset(metadata_table);
+  new_entry.size = file_info.size;
+  if (!write_metadata_entry(ssd_fd, new_entry)) {
+      LOG(ERR, "Error updating metadata");
+  }
+
 
   // close both file descriptors
   close(file_fd);
