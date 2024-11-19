@@ -115,7 +115,8 @@ int main(int argc, char *argv[]) {
         break;
 
       case 'r': // --reset
-        // TODO(akiel): this is a BUG!!!! FIXME
+        // TODO(akiel): this is a BUG!!!! FIXME, have to specify offset twice like this:
+        // ./dist-fs -r <offset> <offset> <size>
         if (optind + 1 >= argc) {
           LOG(ERR, "Option -r requires both <offset> and <size> arguments.");
           print_usage(argv[0]);
