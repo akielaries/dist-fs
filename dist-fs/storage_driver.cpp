@@ -71,13 +71,13 @@ bool write_metadata_entry(int ssd_fd,
   off_t entry_offset = METADATA_TABLE_OFFSET + (index * sizeof(ssd_metadata_t));
   LOG(INFO, "Writing metadata entry at offset: 0x%08lX", entry_offset);
 
-  // Seek to the metadata entry offset
+  // seek to the metadata entry offset
   if (lseek(ssd_fd, entry_offset, SEEK_SET) == -1) {
     LOG(ERR, "Failed to seek to metadata offset: 0x%08lX", entry_offset);
     return false;
   }
 
-  // Write the metadata entry
+  // write metadata entry in the table
   ssize_t written = write(ssd_fd, &entry, sizeof(entry));
   if (written != sizeof(entry)) {
     LOG(ERR,
@@ -120,15 +120,15 @@ int upload_file(const char *filename) {
   LOG(INFO, "Uploading file: %s", filename);
   int rc = 0;
   // create some struct for file information here
-  file_info_t file_info = {0};
+  // INQUIRE: I should look into why ={0} creates a warning but ={} doesn't
+  file_info_t file_info = { };
 
   rc = get_file_info(file_info, filename);
-  /*
-    if (rc != 0) {
-      LOG(ERR, "Failed to retrieve file info for: %s", filename);
-      return 1;
-    }
-  */
+  if (rc != 0) {
+    LOG(ERR, "Failed to retrieve file info for: %s", filename);
+    return 1;
+  }
+
   // open SSD
   int ssd_fd = open(DEVICE_PATH, O_RDWR);
   if (ssd_fd == -1) {
@@ -136,6 +136,7 @@ int upload_file(const char *filename) {
     return 1;
   }
 
+  // read from the metadata table to get the next available offset in the FS
   std::vector<ssd_metadata_t> metadata_table = read_metadata_table(ssd_fd);
   off_t next_offset = find_next_free_offset(metadata_table);
   file_info.offset = next_offset;
@@ -155,6 +156,7 @@ int upload_file(const char *filename) {
   LOG(INFO, " file timestamp: %s", std::ctime(&file_info.timestamp));
 
   LOG(INFO, "Writing FS header at offset: 0x%08lX", next_offset);
+  // TODO/BUG: why does endianness matter here? I suspect something fishy
   uint32_t header_be = htobe32(DIST_FS_SSD_HEADER);
   lseek(ssd_fd, next_offset, SEEK_SET);
   write(ssd_fd, &header_be, sizeof(header_be));
@@ -271,26 +273,25 @@ int list_files() {
 int ssd_read(unsigned char *buffer, size_t size, off_t offset) {
   int fd = open(DEVICE_PATH, O_RDONLY);
   if (fd == -1) {
-    std::cerr << "Error opening device: " << strerror(errno) << "\n";
+    LOG(ERR, "Error opening device {%s}", strerror(errno));
     return 1;
   }
 
   if (lseek(fd, offset, SEEK_SET) == -1) {
-    std::cerr << "Error seeking to offset " << offset << ": " << strerror(errno)
-              << "\n";
+    LOG(ERR, "Error seeking to offset {%d} errno {%d}", offset, strerror(errno));
     close(fd);
     return 1;
   }
 
   ssize_t read_bytes = read(fd, buffer, size);
   if (read_bytes == -1) {
-    std::cerr << "Error reading from device: " << strerror(errno) << "\n";
+    LOG(ERR, "Error opening device {%s}", strerror(errno));
     close(fd);
     return 1;
   }
 
-  std::cout << "Read " << read_bytes << " bytes from " << DEVICE_PATH
-            << " at offset " << offset << "\n";
+  LOG(INFO, "Read {%d} bytes from {%s} at offset {%d}", 
+            read_bytes, DEVICE_PATH, offset);
   for (ssize_t i = 0; i < read_bytes; ++i) {
     printf("0x%X ", buffer[i]);
   }
@@ -303,26 +304,25 @@ int ssd_read(unsigned char *buffer, size_t size, off_t offset) {
 int ssd_write(const unsigned char *buffer, size_t size, off_t offset) {
   int fd = open(DEVICE_PATH, O_RDWR);
   if (fd == -1) {
-    std::cerr << "Error opening device: " << strerror(errno) << "\n";
+    LOG(ERR, "Error opening device {%s}", strerror(errno));
     return 1;
   }
 
   if (lseek(fd, offset, SEEK_SET) == -1) {
-    std::cerr << "Error seeking to offset " << offset << ": " << strerror(errno)
-              << "\n";
+    LOG(ERR, "Error seeking to offset {%d} errno {%d}", offset, strerror(errno));
     close(fd);
     return 1;
   }
 
   ssize_t written = write(fd, buffer, size);
   if (written == -1) {
-    std::cerr << "Error writing to device: " << strerror(errno) << "\n";
+    LOG(ERR, "Error writing to device: %d", strerror(errno));
     close(fd);
     return 1;
   }
 
-  std::cout << "Wrote " << written << " bytes to " << DEVICE_PATH
-            << " at offset " << offset << "\n";
+  LOG(INFO, "Wrote {%d} bytes from {%s} at offset {%d}",
+            written, DEVICE_PATH, offset);
   close(fd);
   return 0;
 }
