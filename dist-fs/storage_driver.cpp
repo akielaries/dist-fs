@@ -1,8 +1,3 @@
-// an idea for this. the "files" should be encapsulated in a header of their
-// own. this will contains stuff like file name, size, stamps, etc. when we
-// eventually want to search for a file, we can use this defined header to
-// basically "skip" thru the file system to "ls" our files
-
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -93,6 +88,50 @@ bool write_metadata_entry(int ssd_fd,
       "Successfully wrote metadata entry at offset: 0x%08lX",
       entry_offset);
   return true;
+}
+
+int print_metadata_table(const std::vector<ssd_metadata_t> &metadata_table) {
+  // each column will have a dynamic size
+  size_t max_filename_length = 0;
+  size_t max_offset_length = 0;
+  size_t max_size_length = 0;
+
+  for (const auto &entry : metadata_table) {
+    max_filename_length = std::max(max_filename_length, strlen(entry.filename));
+    max_offset_length =
+      std::max(max_offset_length, std::to_string(entry.start_offset).size());
+    max_size_length =
+      std::max(max_size_length, std::to_string(entry.size).size());
+  }
+
+  // cast size_t to int for setw
+  int filename_width = static_cast<int>(max_filename_length);
+  int offset_width = static_cast<int>(max_offset_length);
+  int size_width = static_cast<int>(max_size_length);
+
+  // print the header row with dynamic column widths
+  std::cout << std::left << std::setw(filename_width) << "\nName"
+            << " | " << std::setw(offset_width) << "Offset"
+            << " | " << std::setw(size_width) << "bytes"
+            << " | " << std::setw(10) << "kb"
+            << " | " << std::setw(5) << "mb" << std::endl;
+
+  // print the separator line
+  std::cout << std::string(filename_width + offset_width + size_width + 35, '-')
+            << std::endl;
+
+  // print the data rows with dynamic column widths
+  for (const auto &entry : metadata_table) {
+    std::cout << std::left << std::setw(filename_width) << entry.filename
+              << " | " << std::right << std::setw(offset_width) << std::hex
+              << entry.start_offset << " | " << std::right
+              << std::setw(size_width) << std::dec << entry.size << " | "
+              << std::right << std::setw(10) << entry.size / 1024 << " | "
+              << std::right << std::setw(5) << entry.size / 1024 / 1024
+              << std::endl;
+  }
+
+  return 0;
 }
 
 off_t find_next_free_offset(const std::vector<ssd_metadata_t> &metadata_table) {
@@ -260,51 +299,21 @@ int download_file(const char *filename) {
 }
 
 int delete_file(const char *filename) {
-  LOG(INFO, "Searching for file: %s", filename);
+  LOG(INFO, "Searching for file: %s in metadata table", filename);
+
+  // open SSD
+  int ssd_fd = open(DEVICE_PATH, O_RDWR);
+  if (ssd_fd == -1) {
+    LOG(ERR, "Error opening SSD");
+    return 1;
+  }
+
+  // read the metadata table
+  std::vector<ssd_metadata_t> metadata_table = read_metadata_table(ssd_fd);
+
 
   LOG(INFO, "Deleting file: %s", filename);
   return 0;
-}
-
-int print_metadata_table(const std::vector<ssd_metadata_t>& metadata_table) {
-    // each column will have a dynamic size
-    size_t max_filename_length = 0;
-    size_t max_offset_length = 0;
-    size_t max_size_length = 0;
-
-    for (const auto& entry : metadata_table) {
-        max_filename_length = std::max(max_filename_length, strlen(entry.filename));
-        max_offset_length = std::max(max_offset_length, std::to_string(entry.start_offset).size());
-        max_size_length = std::max(max_size_length, std::to_string(entry.size).size());
-    }
-
-    // cast size_t to int for setw
-    int filename_width = static_cast<int>(max_filename_length);
-    int offset_width = static_cast<int>(max_offset_length);
-    int size_width = static_cast<int>(max_size_length);
-
-    // print the header row with dynamic column widths
-    std::cout << std::left << std::setw(filename_width) << "Name"
-              << " | " << std::setw(offset_width) << "Offset"
-              << " | " << std::setw(size_width) << "bytes"
-              << " | " << std::setw(10) << "kb"
-              << " | " << std::setw(5) << "mb" << std::endl;
-
-    // print the separator line
-    std::cout << std::string(filename_width + offset_width + size_width + 35, '-')
-              << std::endl;
-
-    // print the data rows with dynamic column widths
-    for (const auto& entry : metadata_table) {
-        std::cout << std::left << std::setw(filename_width) << entry.filename
-                  << " | " << std::right << std::setw(offset_width) << std::hex << entry.start_offset
-                  << " | " << std::right << std::setw(size_width) << std::dec << entry.size
-                  << " | " << std::right << std::setw(10) << entry.size / 1024
-                  << " | " << std::right << std::setw(5) << entry.size / 1024 / 1024
-                  << std::endl;
-    }
-
-    return 0;
 }
 
 int list_files() {
