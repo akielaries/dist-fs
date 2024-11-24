@@ -31,7 +31,7 @@ typedef struct {
 
 #define METADATA_TABLE_SZ sizeof(ssd_metadata_t) * MAX_FILES
 
-std::vector<ssd_metadata_t> read_metadata_table(int ssd_fd) {
+static std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd) {
   LOG(INFO, "Reading SSD metadata table");
   std::vector<ssd_metadata_t> metadata_table;
 
@@ -54,7 +54,7 @@ std::vector<ssd_metadata_t> read_metadata_table(int ssd_fd) {
   size_t num_entries = bytes_read / sizeof(ssd_metadata_t);
 
   for (size_t i = 0; i < num_entries; ++i) {
-    if (entries[i].start_offset != 0) { // Valid entry check
+    if (entries[i].start_offset != 0) { // valid entry check
       metadata_table.push_back(entries[i]);
     }
   }
@@ -62,9 +62,8 @@ std::vector<ssd_metadata_t> read_metadata_table(int ssd_fd) {
   return metadata_table;
 }
 
-bool write_metadata_entry(int ssd_fd,
-                          const ssd_metadata_t &entry,
-                          size_t index) {
+static bool
+metadata_table_write(int ssd_fd, const ssd_metadata_t &entry, size_t index) {
   off_t entry_offset = METADATA_TABLE_OFFSET + (index * sizeof(ssd_metadata_t));
   LOG(INFO, "Writing metadata entry at offset: 0x%08lX", entry_offset);
 
@@ -90,7 +89,8 @@ bool write_metadata_entry(int ssd_fd,
   return true;
 }
 
-int print_metadata_table(const std::vector<ssd_metadata_t> &metadata_table) {
+static int
+metadata_table_print(const std::vector<ssd_metadata_t> &metadata_table) {
   // each column will have a dynamic size
   size_t max_filename_length = 0;
   size_t max_offset_length = 0;
@@ -134,7 +134,8 @@ int print_metadata_table(const std::vector<ssd_metadata_t> &metadata_table) {
   return 0;
 }
 
-off_t find_next_free_offset(const std::vector<ssd_metadata_t> &metadata_table) {
+static off_t
+metadata_table_find_offset(const std::vector<ssd_metadata_t> &metadata_table) {
   LOG(INFO, "Finding next free offset for file storage");
   const off_t METADATA_SIZE = MAX_FILES * sizeof(ssd_metadata_t);
   LOG(INFO, "Metadata Size          : %d", METADATA_SIZE);
@@ -178,8 +179,8 @@ int upload_file(const char *filename) {
   }
 
   // read from the metadata table to get the next available offset in the FS
-  std::vector<ssd_metadata_t> metadata_table = read_metadata_table(ssd_fd);
-  off_t next_offset = find_next_free_offset(metadata_table);
+  std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  off_t next_offset = metadata_table_find_offset(metadata_table);
   file_info.offset = next_offset;
   LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
 
@@ -280,7 +281,7 @@ int upload_file(const char *filename) {
 
   size_t index = metadata_table.size();
   LOG(INFO, "Metadata table size : %d", index);
-  if (!write_metadata_entry(ssd_fd, new_entry, index)) {
+  if (!metadata_table_write(ssd_fd, new_entry, index)) {
     LOG(ERR, "Failed to write metadata entry for file: %s", filename);
     return 1;
   }
@@ -295,6 +296,16 @@ int upload_file(const char *filename) {
 
 int download_file(const char *filename) {
   LOG(INFO, "Downloading file: %s", filename);
+
+  // read metadata table
+
+  // search for filename in metadata table
+
+  // if there is a match
+
+  // start at the offset of that file, and start writing it to a local binary
+  // file
+
   return 0;
 }
 
@@ -309,8 +320,15 @@ int delete_file(const char *filename) {
   }
 
   // read the metadata table
-  std::vector<ssd_metadata_t> metadata_table = read_metadata_table(ssd_fd);
+  std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
 
+  // search for filename in metadata table
+
+  // if there is a match
+
+  // start at the offset of the file, and fill it in with zeroes
+
+  // bump up the file after to fill in this new space
 
   LOG(INFO, "Deleting file: %s", filename);
   return 0;
@@ -327,10 +345,10 @@ int list_files() {
   }
 
   // read the metadata table
-  std::vector<ssd_metadata_t> metadata_table = read_metadata_table(ssd_fd);
+  std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
 
   LOG(INFO, "Number of files : %d", metadata_table.size());
-  print_metadata_table(metadata_table);
+  metadata_table_print(metadata_table);
 
   return 0;
 }
