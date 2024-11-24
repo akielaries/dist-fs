@@ -21,38 +21,40 @@
 
 #define DEVICE_PATH "/dev/sda"
 
+
 // metadata table starts at the very beginning of the drive
 const off_t METADATA_TABLE_OFFSET = 0;
 // max files I want to track for now...
 const size_t MAX_FILES = 1024;
 
-
+/** @brief SSD metadata table info */
 typedef struct {
   char filename[256]; // name
   off_t start_offset; // offset on ssd
   size_t size;        // file size in bytes
 } ssd_metadata_t;
 
+#define METADATA_TABLE_SZ sizeof(ssd_metadata_t) * MAX_FILES
 
 std::vector<ssd_metadata_t> read_metadata_table(int ssd_fd) {
   LOG(INFO, "Reading SSD metadata table");
   std::vector<ssd_metadata_t> metadata_table;
 
-  // Seek to the start of the metadata table
+  // seek to the start of the metadata table
   if (lseek(ssd_fd, 0, SEEK_SET) == -1) {
     LOG(ERR, "Failed to seek to metadata table");
     return metadata_table;
   }
 
-  // Read the metadata section
-  char buffer[278528] = {0};
+  // read the metadata section
+  char buffer[METADATA_TABLE_SZ] = {0};
   ssize_t bytes_read = read(ssd_fd, buffer, 278528);
   if (bytes_read <= 0) {
     LOG(INFO, "No metadata found. Initializing empty table.");
     return metadata_table;
   }
 
-  // Parse metadata entries
+  // parse metadata entries
   ssd_metadata_t *entries = reinterpret_cast<ssd_metadata_t *>(buffer);
   size_t num_entries = bytes_read / sizeof(ssd_metadata_t);
 
@@ -223,7 +225,10 @@ int upload_file(const char *filename) {
     static_cast<double>(total_bytes_written) / duration.count();
   LOG(INFO, "Total bytes written: %ld", total_bytes_written);
   LOG(INFO, "Upload time: %.2f seconds", duration.count());
-  LOG(INFO, "Upload speed: %.2f kbps", upload_speed / 1024);
+  LOG(INFO,
+      "Upload speed: %.2f kbps | %.2f mbps",
+      upload_speed / 1024,
+      upload_speed / 1024 / 1024);
 
   ssd_metadata_t new_entry = {};
   strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
@@ -255,17 +260,68 @@ int download_file(const char *filename) {
 }
 
 int delete_file(const char *filename) {
+  LOG(INFO, "Searching for file: %s", filename);
+
   LOG(INFO, "Deleting file: %s", filename);
   return 0;
+}
+
+int print_metadata_table(const std::vector<ssd_metadata_t>& metadata_table) {
+    // each column will have a dynamic size
+    size_t max_filename_length = 0;
+    size_t max_offset_length = 0;
+    size_t max_size_length = 0;
+
+    for (const auto& entry : metadata_table) {
+        max_filename_length = std::max(max_filename_length, strlen(entry.filename));
+        max_offset_length = std::max(max_offset_length, std::to_string(entry.start_offset).size());
+        max_size_length = std::max(max_size_length, std::to_string(entry.size).size());
+    }
+
+    // cast size_t to int for setw
+    int filename_width = static_cast<int>(max_filename_length);
+    int offset_width = static_cast<int>(max_offset_length);
+    int size_width = static_cast<int>(max_size_length);
+
+    // print the header row with dynamic column widths
+    std::cout << std::left << std::setw(filename_width) << "Name"
+              << " | " << std::setw(offset_width) << "Offset"
+              << " | " << std::setw(size_width) << "bytes"
+              << " | " << std::setw(10) << "kb"
+              << " | " << std::setw(5) << "mb" << std::endl;
+
+    // print the separator line
+    std::cout << std::string(filename_width + offset_width + size_width + 35, '-')
+              << std::endl;
+
+    // print the data rows with dynamic column widths
+    for (const auto& entry : metadata_table) {
+        std::cout << std::left << std::setw(filename_width) << entry.filename
+                  << " | " << std::right << std::setw(offset_width) << std::hex << entry.start_offset
+                  << " | " << std::right << std::setw(size_width) << std::dec << entry.size
+                  << " | " << std::right << std::setw(10) << entry.size / 1024
+                  << " | " << std::right << std::setw(5) << entry.size / 1024 / 1024
+                  << std::endl;
+    }
+
+    return 0;
 }
 
 int list_files() {
   LOG(INFO, "Listing all files on the drive");
 
-  LOG(INFO, "Searching through the metadata table");
+  // open SSD
+  int ssd_fd = open(DEVICE_PATH, O_RDWR);
+  if (ssd_fd == -1) {
+    LOG(ERR, "Error opening SSD");
+    return 1;
+  }
 
-  LOG(INFO, "For each file, list it's name, size, and offset on the SSD");
+  // read the metadata table
+  std::vector<ssd_metadata_t> metadata_table = read_metadata_table(ssd_fd);
 
+  LOG(INFO, "Number of files : %d", metadata_table.size());
+  print_metadata_table(metadata_table);
 
   return 0;
 }
