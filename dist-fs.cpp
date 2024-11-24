@@ -115,44 +115,31 @@ int main(int argc, char *argv[]) {
         break;
 
       case 'r': // --reset
-        // TODO(akiel): this is a BUG!!!! FIXME, have to specify offset twice like this:
-        // ./dist-fs -r <offset> <offset> <size>
-        if (optind + 1 >= argc) {
+        if (optarg == NULL) {
           LOG(ERR, "Option -r requires both <offset> and <size> arguments.");
           print_usage(argv[0]);
           return -1;
         }
 
-        // ensure valid argument is available for offset
-        if (argv[optind] == NULL) {
-          LOG(ERR, "Missing offset argument for --reset");
-          return -1;
-        }
+        // parse offset from optarg (first argument after -r)
+        reset_offset = strtol(optarg, NULL, 16);
 
-        // parse offset in hexadecimal (0x...)
-        reset_offset = strtol(argv[optind++], NULL, 16);
-        if (reset_offset == 0 && strcmp(argv[optind - 1], "0") != 0) {
-          LOG(ERR, "Invalid offset for --reset: %s", argv[optind - 1]);
-          return -1;
-        }
-
-        // ensure valid argument is available for size
-        if (argv[optind] == NULL) {
+        // ensure the next argument is provided for size
+        if (optind >= argc) {
           LOG(ERR, "Missing size argument for --reset");
+          print_usage(argv[0]);
           return -1;
         }
 
-        // parse size in decimal
+        // parse size from the next argument
         reset_size = strtol(argv[optind++], NULL, 10);
         if (reset_size == 0) {
           LOG(ERR, "Invalid size for --reset: %s", argv[optind - 1]);
           return -1;
         }
 
-        // call the reset function
         ssd_reset(reset_offset, reset_size);
         break;
-
 
       default:
         LOG(ERR, "Unknown option: -%c", option);

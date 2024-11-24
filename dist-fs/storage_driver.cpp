@@ -121,7 +121,7 @@ int upload_file(const char *filename) {
   int rc = 0;
   // create some struct for file information here
   // INQUIRE: I should look into why ={0} creates a warning but ={} doesn't
-  file_info_t file_info = { };
+  file_info_t file_info = {};
 
   rc = get_file_info(file_info, filename);
   if (rc != 0) {
@@ -263,7 +263,7 @@ int list_files() {
   LOG(INFO, "Listing all files on the drive");
 
   LOG(INFO, "Searching through the metadata table");
-  
+
   LOG(INFO, "For each file, list it's name, size, and offset on the SSD");
 
 
@@ -278,7 +278,10 @@ int ssd_read(unsigned char *buffer, size_t size, off_t offset) {
   }
 
   if (lseek(fd, offset, SEEK_SET) == -1) {
-    LOG(ERR, "Error seeking to offset {%d} errno {%d}", offset, strerror(errno));
+    LOG(ERR,
+        "Error seeking to offset {%d} errno {%d}",
+        offset,
+        strerror(errno));
     close(fd);
     return 1;
   }
@@ -290,8 +293,11 @@ int ssd_read(unsigned char *buffer, size_t size, off_t offset) {
     return 1;
   }
 
-  LOG(INFO, "Read {%d} bytes from {%s} at offset {%d}", 
-            read_bytes, DEVICE_PATH, offset);
+  LOG(INFO,
+      "Read {%d} bytes from {%s} at offset {%d}",
+      read_bytes,
+      DEVICE_PATH,
+      offset);
   for (ssize_t i = 0; i < read_bytes; ++i) {
     printf("0x%X ", buffer[i]);
   }
@@ -309,7 +315,10 @@ int ssd_write(const unsigned char *buffer, size_t size, off_t offset) {
   }
 
   if (lseek(fd, offset, SEEK_SET) == -1) {
-    LOG(ERR, "Error seeking to offset {%d} errno {%d}", offset, strerror(errno));
+    LOG(ERR,
+        "Error seeking to offset {%d} errno {%d}",
+        offset,
+        strerror(errno));
     close(fd);
     return 1;
   }
@@ -321,8 +330,11 @@ int ssd_write(const unsigned char *buffer, size_t size, off_t offset) {
     return 1;
   }
 
-  LOG(INFO, "Wrote {%d} bytes from {%s} at offset {%d}",
-            written, DEVICE_PATH, offset);
+  LOG(INFO,
+      "Wrote {%d} bytes from {%s} at offset {%d}",
+      written,
+      DEVICE_PATH,
+      offset);
   close(fd);
   return 0;
 }
