@@ -14,29 +14,21 @@
 #include "audio_files.hpp"
 #include "storage.hpp"
 
-#define DEVICE_PATH "/dev/sda"
-
 
 // metadata table starts at the very beginning of the drive
 const off_t METADATA_TABLE_OFFSET = 0;
 // max files I want to track for now...
 const size_t MAX_FILES = 1024;
 
-/** @brief SSD metadata table info */
-typedef struct {
-  char filename[256]; // name
-  off_t start_offset; // offset on ssd
-  size_t size;        // file size in bytes
-} ssd_metadata_t;
-
+// total size of the metadata table
 #define METADATA_TABLE_SZ sizeof(ssd_metadata_t) * MAX_FILES
 
 
-static std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd) {
+std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd) {
   LOG(INFO, "Reading SSD metadata table");
   std::vector<ssd_metadata_t> metadata_table;
 
-  // seek to the start of the metadata table
+  // seek from beginning of file
   if (lseek(ssd_fd, 0, SEEK_SET) == -1) {
     LOG(ERR, "Failed to seek to metadata table");
     return metadata_table;

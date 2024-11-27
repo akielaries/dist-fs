@@ -18,7 +18,6 @@
 
 //#define DEBUG_PRINT 0
 
-// Helper function to print section details
 void print_chunk_info(const std::string &label, uint32_t value) {
   std::cout << label << ": 0x" << std::hex << std::setw(8) << std::setfill('0')
             << value << std::dec << " (" << value << ")\n";
