@@ -31,6 +31,7 @@ typedef struct {
 
 #define METADATA_TABLE_SZ sizeof(ssd_metadata_t) * MAX_FILES
 
+
 static std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd) {
   LOG(INFO, "Reading SSD metadata table");
   std::vector<ssd_metadata_t> metadata_table;
