@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSD File Manager</title>
+</head>
+<body>
+    <h1>SSD File Manager</h1>
+    
+    <h2>Upload File</h2>
+    <input type="text" id="upload-filename" placeholder="Enter filename">
+    <button onclick="uploadFile()">Upload</button>
+    
+    <h2>Delete File</h2>
+    <input type="text" id="delete-filename" placeholder="Enter filename">
+    <button onclick="deleteFile()">Delete</button>
+    
+    <h2>File List</h2>
+    <button onclick="listFiles()">Refresh List</button>
+    <ul id="file-list"></ul>
+    
+    <script>
+        async function uploadFile() {
+            const filename = document.getElementById('upload-filename').value;
+            if (!filename) {
+                alert('Please enter a filename.');
+                return;
+            }
+            const response = await fetch(`/api/upload?filename=${encodeURIComponent(filename)}`, { method: 'POST' });
+            alert(await response.text());
+            listFiles();
+        }
+
+        async function deleteFile() {
+            const filename = document.getElementById('delete-filename').value;
+            if (!filename) {
+                alert('Please enter a filename.');
+                return;
+            }
+            const response = await fetch(`/api/delete?filename=${encodeURIComponent(filename)}`, { method: 'POST' });
+            alert(await response.text());
+            listFiles();
+        }
+
+        async function listFiles() {
+            const response = await fetch('/api/list');
+            const data = await response.json();
+            const fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+            data.files.forEach(file => {
+                const li = document.createElement('li');
+                li.textContent = file;
+                fileList.appendChild(li);
+            });
+        }
+
+        // Automatically refresh file list on page load
+        listFiles();
+    </script>
+</body>
+</html>
+
