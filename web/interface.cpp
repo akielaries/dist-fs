@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <utility>
+
+#include "../dist-fs/storage.hpp"
 
 // Simulated SSD operations
 std::mutex ssd_mutex;
@@ -25,9 +28,32 @@ bool delete_file(const std::string& filename) {
     return false;
 }
 
-std::vector<std::string> list_files() {
-    std::lock_guard<std::mutex> lock(ssd_mutex);
-    return ssd_files;
+crow::json::wvalue metadata_to_json() {
+    int ssd_fd = open(DEVICE_PATH, O_RDWR);
+    if (ssd_fd == -1) {
+        throw std::runtime_error("Error opening SSD");
+    }
+
+    // Read the metadata table
+    std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+
+    // Prepare the JSON response
+    crow::json::wvalue response;
+    std::vector<crow::json::wvalue> files; // Create an array of JSON objects
+
+    for (const auto& entry : metadata_table) {
+        crow::json::wvalue file;
+        file["name"] = entry.filename;
+        file["offset"] = static_cast<int64_t>(entry.start_offset);
+        file["size_bytes"] = static_cast<int64_t>(entry.size);
+        file["size_kb"] = entry.size / 1024;
+        file["size_mb"] = entry.size / (1024 * 1024);
+
+        files.push_back(std::move(file)); // Add the file object to the list
+    }
+
+    response["files"] = std::move(files); // Assign the list to the "files" key
+    return response;
 }
 
 int main() {
@@ -67,11 +93,13 @@ int main() {
 
     // List files API
     CROW_ROUTE(app, "/api/list").methods("GET"_method)([](const crow::request&) {
-        auto files = list_files();
-        crow::json::wvalue response;
-        response["files"] = files;
-        return crow::response(response);
+        try {
+            return crow::response(metadata_to_json());
+        } catch (const std::exception& ex) {
+            return crow::response(500, std::string("Error: ") + ex.what());
+        }
     });
+
 
     // Start the server on port 2020
     app.port(2020).multithreaded().run();
