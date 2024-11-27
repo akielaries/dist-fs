@@ -158,6 +158,9 @@ int upload_file(const char *filename) {
   // INQUIRE: I should look into why ={0} creates a warning but ={} doesn't
   file_info_t file_info = {};
 
+  // TODO: check for duplicates first before uploading? or maybe we dont care. 
+  // it would have to be byte by byte to make sure its not a copy
+
   rc = get_file_info(file_info, filename);
   if (rc != 0) {
     LOG(ERR, "Failed to retrieve file info for: %s", filename);
