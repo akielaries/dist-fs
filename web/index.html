@@ -7,55 +7,43 @@
 </head>
 <body>
     <h1>SSD File Manager</h1>
-    
-    <h2>Upload File</h2>
-    <input type="text" id="upload-filename" placeholder="Enter filename">
-    <button onclick="uploadFile()">Upload</button>
-    
-    <h2>Delete File</h2>
-    <input type="text" id="delete-filename" placeholder="Enter filename">
-    <button onclick="deleteFile()">Delete</button>
-    
+
     <h2>File List</h2>
     <button onclick="listFiles()">Refresh List</button>
-    <ul id="file-list"></ul>
-    
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Offset</th>
+                <th>Size (Bytes)</th>
+                <th>Size (KB)</th>
+                <th>Size (MB)</th>
+            </tr>
+        </thead>
+        <tbody id="file-list"></tbody>
+    </table>
+
     <script>
-        async function uploadFile() {
-            const filename = document.getElementById('upload-filename').value;
-            if (!filename) {
-                alert('Please enter a filename.');
-                return;
-            }
-            const response = await fetch(`/api/upload?filename=${encodeURIComponent(filename)}`, { method: 'POST' });
-            alert(await response.text());
-            listFiles();
-        }
-
-        async function deleteFile() {
-            const filename = document.getElementById('delete-filename').value;
-            if (!filename) {
-                alert('Please enter a filename.');
-                return;
-            }
-            const response = await fetch(`/api/delete?filename=${encodeURIComponent(filename)}`, { method: 'POST' });
-            alert(await response.text());
-            listFiles();
-        }
-
         async function listFiles() {
             const response = await fetch('/api/list');
             const data = await response.json();
             const fileList = document.getElementById('file-list');
-            fileList.innerHTML = '';
+            fileList.innerHTML = ''; // Clear existing rows
+
             data.files.forEach(file => {
-                const li = document.createElement('li');
-                li.textContent = file;
-                fileList.appendChild(li);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${file.name}</td>
+                    <td>${file.offset.toString(16)}</td>
+                    <td>${file.size_bytes}</td>
+                    <td>${file.size_kb}</td>
+                    <td>${file.size_mb}</td>
+                `;
+                fileList.appendChild(row);
             });
         }
 
-        // Automatically refresh file list on page load
+        // Automatically load files on page load
         listFiles();
     </script>
 </body>
