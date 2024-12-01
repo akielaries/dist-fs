@@ -16,12 +16,11 @@
 
 
 // metadata table starts at the very beginning of the drive
-const off_t METADATA_TABLE_OFFSET = 0;
+constexpr const off_t METADATA_TABLE_OFFSET = 0;
 // max files I want to track for now...
-const size_t MAX_FILES = 1024;
-
+constexpr const size_t MAX_FILES = 1024;
 // total size of the metadata table
-#define METADATA_TABLE_SZ sizeof(ssd_metadata_t) * MAX_FILES
+constexpr const size_t METADATA_TABLE_SZ = sizeof(ssd_metadata_t) * MAX_FILES;
 
 
 std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd) {
