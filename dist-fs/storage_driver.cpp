@@ -156,7 +156,7 @@ metadata_table_find_offset(const std::vector<ssd_metadata_t> &metadata_table) {
 int drive_info() {
   int rc = 0;
 
-  // 
+  //
 
   return rc;
 }
@@ -173,7 +173,7 @@ int upload_file(const char *filename) {
   // INQUIRE: I should look into why ={0} creates a warning but ={} doesn't
   file_info_t file_info = {};
 
-  // TODO: check for duplicates first before uploading? or maybe we dont care. 
+  // TODO: check for duplicates first before uploading? or maybe we dont care.
   // it would have to be byte by byte to make sure its not a copy
   rc = get_file_info(file_info, filename);
   if (rc != 0) {
@@ -333,68 +333,84 @@ int delete_file(const char *filename) {
 
   // search for filename in metadata table
   LOG(INFO, "Searching for file: %s in metadata table", filename);
-
-  // Find the file to delete
-  size_t file_index = metadata_table.size(); // Set to invalid index initially
+  // set index to something invalid
+  size_t file_index = metadata_table.size();
   for (size_t i = 0; i < metadata_table.size(); ++i) {
-      if (strcmp(metadata_table[i].filename, filename) == 0) {
-          file_index = i;
-          break;
-      }
+    if (strcmp(metadata_table[i].filename, filename) == 0) {
+      file_index = i;
+      break;
+    }
   }
 
   if (file_index == metadata_table.size()) {
-      LOG(WARN, "File %s not found in metadata table", filename);
-      close(ssd_fd);
-      return -1; // File not found
+    LOG(WARN, "File %s not found in metadata table", filename);
+    close(ssd_fd);
+    return -1;
   }
 
   const ssd_metadata_t &file_entry = metadata_table[file_index];
-  LOG(INFO, "Found file %s with offset 0x%x and size %u bytes", 
-      file_entry.filename, file_entry.start_offset, file_entry.size);
+  LOG(INFO,
+      "Found file %s with offset 0x%x and size %u bytes",
+      file_entry.filename,
+      file_entry.start_offset,
+      file_entry.size);
 
-  // Step 2: Delete file content by writing zeroes
+  // delete file content by writing a 0'd out buffer
   std::vector<unsigned char> reset_buffer(file_entry.size, 0);
   if (lseek(ssd_fd, file_entry.start_offset, SEEK_SET) == -1) {
-      LOG(ERR, "Failed to seek to file offset 0x%x", file_entry.start_offset);
-      close(ssd_fd);
-      return -1;
+    LOG(ERR, "Failed to seek to file offset 0x%x", file_entry.start_offset);
+    close(ssd_fd);
+    return -1;
   }
+
+  LOG(INFO,
+      "Deleting file by writing zeroes at offset 0x%x",
+      file_entry.start_offset);
   ssize_t written = write(ssd_fd, reset_buffer.data(), file_entry.size);
   if (written != static_cast<ssize_t>(file_entry.size)) {
-      LOG(ERR, "Failed to write zeroes to file at offset 0x%x", file_entry.start_offset);
-      close(ssd_fd);
-      return -1;
+    LOG(ERR,
+        "Failed to write zeroes to file at offset 0x%x",
+        file_entry.start_offset);
+    close(ssd_fd);
+    return -1;
   }
-  LOG(INFO, "Successfully erased %u bytes for file %s", file_entry.size, file_entry.filename);
+  LOG(INFO,
+      "Successfully erased %u bytes for file %s",
+      file_entry.size,
+      file_entry.filename);
 
-  // Step 3: Remove metadata entry
+  // remove the metadata entry
+  LOG(INFO, "Deleting metadata entry for file {%s}", file_entry.filename);
   metadata_table.erase(metadata_table.begin() + file_index);
 
-  // Rewrite the updated metadata table back to the SSD
+  // rewrite the updated metadata table back to the SSD
+  LOG(INFO, "Rewriting metadata table");
   for (size_t i = 0; i < metadata_table.size(); ++i) {
-      if (!metadata_table_write(ssd_fd, metadata_table[i], i)) {
-          LOG(ERR, "Failed to write metadata table entry %zu", i);
-          close(ssd_fd);
-          return -1;
-      }
-  }
-
-  // Zero out the unused metadata entry space
-  ssd_metadata_t empty_entry = {};
-  size_t empty_index = metadata_table.size();
-  if (!metadata_table_write(ssd_fd, empty_entry, empty_index)) {
-      LOG(ERR, "Failed to clear the unused metadata entry at index %zu", empty_index);
+    if (!metadata_table_write(ssd_fd, metadata_table[i], i)) {
+      LOG(ERR, "Failed to write metadata table entry %zu", i);
       close(ssd_fd);
       return -1;
+    }
   }
 
-  LOG(INFO, "Successfully deleted file %s and updated metadata table", filename);
+  // zero out the unused metadata entry space
+  ssd_metadata_t empty_entry = {};
+  size_t empty_index = metadata_table.size();
+  LOG(INFO, "Zeroing out unused metadata entry space");
+  if (!metadata_table_write(ssd_fd, empty_entry, empty_index)) {
+    LOG(ERR,
+        "Failed to clear the unused metadata entry at index %zu",
+        empty_index);
+    close(ssd_fd);
+    return -1;
+  }
 
-  // Close the SSD
+  LOG(INFO,
+      "Successfully deleted file %s and updated metadata table",
+      filename);
+  // close ssd file desc
   close(ssd_fd);
   return 0;
-
 }
 
 int list_files() {
@@ -416,6 +432,8 @@ int list_files() {
   return 0;
 }
 
+// SSD I/O functions
+/*****************************************************************************/
 int ssd_read(unsigned char *buffer, size_t size, off_t offset) {
   int fd = open(DEVICE_PATH, O_RDONLY);
   if (fd == -1) {
@@ -485,6 +503,8 @@ int ssd_write(const unsigned char *buffer, size_t size, off_t offset) {
   return 0;
 }
 
+// SSD "self" tests
+/*****************************************************************************/
 int ssd_echo(const unsigned char *pattern) {
   unsigned char read_buffer[DIST_FS_SSD_PATTERN_SZ];
 
