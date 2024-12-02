@@ -99,6 +99,7 @@ int main(int argc, char *argv[]) {
         break;
       case 'l': // --list
         list_files();
+        drive_info();
         break;
       case 'S': // --ssd_echo
         if (optarg == NULL) {
