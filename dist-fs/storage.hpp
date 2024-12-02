@@ -20,6 +20,10 @@ typedef struct {
   size_t size;        // file size in bytes
 } ssd_metadata_t;
 
+
+/* hard drive operations */
+int drive_info();
+
 std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd);
 
 /* main SSD operations */

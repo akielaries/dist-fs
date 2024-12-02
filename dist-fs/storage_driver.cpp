@@ -23,6 +23,8 @@ constexpr const size_t MAX_FILES = 1024;
 constexpr const size_t METADATA_TABLE_SZ = sizeof(ssd_metadata_t) * MAX_FILES;
 
 
+// metadata table operations
+/*****************************************************************************/
 std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd) {
   LOG(INFO, "Reading SSD metadata table");
   std::vector<ssd_metadata_t> metadata_table;
@@ -149,17 +151,30 @@ metadata_table_find_offset(const std::vector<ssd_metadata_t> &metadata_table) {
   return max_end_offset;
 }
 
+// hard drive operations
+/*****************************************************************************/
+int drive_info() {
+  int rc = 0;
+
+  // 
+
+  return rc;
+}
+
+// file operations, upload, list, delete, etc
+/*****************************************************************************/
+
 /*TODO: I suspect some heavy optimizations will need to be done here */
 int upload_file(const char *filename) {
   LOG(INFO, "Uploading file: %s", filename);
   int rc = 0;
+
   // create some struct for file information here
   // INQUIRE: I should look into why ={0} creates a warning but ={} doesn't
   file_info_t file_info = {};
 
   // TODO: check for duplicates first before uploading? or maybe we dont care. 
   // it would have to be byte by byte to make sure its not a copy
-
   rc = get_file_info(file_info, filename);
   if (rc != 0) {
     LOG(ERR, "Failed to retrieve file info for: %s", filename);
@@ -305,27 +320,47 @@ int download_file(const char *filename) {
 }
 
 int delete_file(const char *filename) {
-  LOG(INFO, "Searching for file: %s in metadata table", filename);
+  LOG(INFO, "Deleting file: %s", filename);
 
   // open SSD
   int ssd_fd = open(DEVICE_PATH, O_RDWR);
   if (ssd_fd == -1) {
     LOG(ERR, "Error opening SSD");
-    return 1;
+    return -1;
   }
 
   // read the metadata table
   std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
 
   // search for filename in metadata table
+  LOG(INFO, "Searching for file: %s in metadata table", filename);
+  for (const auto &entry : metadata_table) {
+    // if we find a match for filename in metadata table
+    if (strstr(entry.filename, filename) != NULL) {
+      LOG(INFO, "Found file match!");
+      LOG(INFO, "Offset of {%s} = %d", entry.filename, entry.start_offset);
 
-  // if there is a match
+      // start at the offset of the file, fill it in with zeroes
+      // a 4kb buffer to chunkify the upload
+      char buffer[4096];
+      // move the offset to the correct position for writing the file content
+      lseek(ssd_fd, entry.start_offset, SEEK_SET);
 
-  // start at the offset of the file, and fill it in with zeroes
+      std::vector<unsigned char> reset_buffer(entry.size, 0);
+      
+      LOG(INFO, "Erasing {%d b} for file {%s} starting at offset {%d} ",
+                entry.size, entry.filename, entry.start_offset);
+      ssize_t written = write(ssd_fd, reset_buffer.data(), entry.size);
 
-  // bump up the file after to fill in this new space
 
-  LOG(INFO, "Deleting file: %s", filename);
+
+      // if there is a file after this one, bump it up
+
+      // finally, cleanup the metadata table entry
+      break;
+    }
+  }
+
   return 0;
 }
 
