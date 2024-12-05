@@ -161,7 +161,7 @@ int drive_info() {
   return rc;
 }
 
-// file operations, upload, list, delete, etc
+// file operations, upload, delete, list, etc
 /*****************************************************************************/
 
 /*TODO: I suspect some heavy optimizations will need to be done here */

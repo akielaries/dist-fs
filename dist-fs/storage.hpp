@@ -11,7 +11,8 @@
 // these are the start bytes for each file in the file system
 #define DIST_FS_SSD_HEADER 0xDEADBEEF
 
-#define DEVICE_PATH "/dev/sda"
+// the drive!!
+#define DEVICE_PATH "/dev/disk/by-id/usb-Seagate_Slim_SL_NA710NYN-0:0"
 
 /** @brief SSD metadata table info */
 typedef struct {
