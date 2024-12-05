@@ -192,8 +192,8 @@ int upload_file(const char *filename) {
   std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
   off_t next_offset = metadata_table_find_offset(metadata_table);
   file_info.offset = next_offset;
+ 
   LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
-
   LOG(INFO, "Creating FS header");
   LOG(INFO, " start bytes: 0x%8X", DIST_FS_SSD_HEADER);
   LOG(INFO, " filename : hex:() ascii:(%s)", file_info.name);
@@ -205,8 +205,8 @@ int upload_file(const char *filename) {
       ((file_info.size / 1024) / 1024) / 1024);
   LOG(INFO, " file type: %d", file_info.type);
   LOG(INFO, " file offset: %d", file_info.offset);
-  LOG(INFO, " file timestamp: %s", std::ctime(&file_info.timestamp));
-
+  LOG(INFO, " file timestamp: %s", 
+      strip_newline(std::ctime(&file_info.timestamp)).c_str());
   LOG(INFO, "Writing FS header at offset: 0x%08lX", next_offset);
   // TODO/BUG: why does endianness matter here? I suspect something fishy
   uint32_t header_be = htobe32(DIST_FS_SSD_HEADER);

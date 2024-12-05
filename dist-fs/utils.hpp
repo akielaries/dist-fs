@@ -28,3 +28,5 @@ void log(log_level_e level,
 std::string hex_to_ascii(const std::array<char, 16> &header);
 std::string hex_to_ascii(uint64_t hexValue);
 std::string hex_to_ascii(uint32_t hexValue);
+
+std::string strip_newline(const char *ctime_str);

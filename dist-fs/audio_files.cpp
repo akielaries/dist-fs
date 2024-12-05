@@ -27,7 +27,6 @@ int get_wav_file(std::ifstream &file) {
   // make sure we're at the start of the file stream
   file.seekg(0);
 
-  // Read the RIFF header (first 12 bytes)
   // RIFF header is within the first 12 bytes, lets make sure
   char riff_header[DIST_FS_ID_HEADER];
   file.read(riff_header, DIST_FS_ID_HEADER);

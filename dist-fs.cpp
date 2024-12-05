@@ -23,6 +23,7 @@
 void print_usage(const char *program_name) {
   printf("Usage: %s [OPTIONS]\n", program_name);
   printf("Options:\n");
+  printf("  -h, --help               Print usage of %s\n", program_name);
   printf("  -u, --upload <file>      Upload the specified file to the SSD\n");
   printf(
     "  -d, --download <file>    Download the specified file from the SSD\n");
@@ -71,7 +72,7 @@ int main(int argc, char *argv[]) {
   off_t reset_offset = 0;
   size_t reset_size = 0;
 
-  while ((option = getopt(argc, argv, "u:d:D:lS:r:")) != -1) {
+  while ((option = getopt(argc, argv, "u:d:D:lS:r:h")) != -1) {
     switch (option) {
       case 'u': // --upload
         if (optarg == NULL) {
@@ -140,6 +141,10 @@ int main(int argc, char *argv[]) {
         }
 
         ssd_reset(reset_offset, reset_size);
+        break;
+
+      case 'h': // --help
+        print_usage(argv[0]);;
         break;
 
       default:
