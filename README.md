@@ -43,9 +43,9 @@ typedef struct {
   char filename[256]; // name
   off_t start_offset; // offset on ssd
   size_t size;        // file size in bytes
-} ssd_metadata_t;
+} storage_metadata_t;
 ```
-The first 278528 bytes which is `sizeof(ssd_metadata_t) * max files` is reserved for the metadata table
+The first 278528 bytes which is `sizeof(storage_metadata_t) * max files` is reserved for the metadata table
 and looks like the following:
 ```
 $ hexdump -s 0x0 -C -n 512 /dev/disk/by-id/usb-Seagate_Slim_SL_NA710NYN-0:0
