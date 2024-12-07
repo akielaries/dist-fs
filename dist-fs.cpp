@@ -105,6 +105,7 @@ int main(int argc, char *argv[]) {
         if (optarg == NULL) {
           LOG(ERR, "Option -d requires a file argument.");
           print_usage(argv[0]);
+          rc = -1;
           goto cleanup;
         }
         download_file(optarg);
@@ -114,6 +115,7 @@ int main(int argc, char *argv[]) {
         if (optarg == NULL) {
           LOG(ERR, "Option -D requires a file argument.");
           print_usage(argv[0]);
+          rc = -1;
           goto cleanup;
         }
         delete_file(optarg);
@@ -128,11 +130,13 @@ int main(int argc, char *argv[]) {
         if (optarg == NULL) {
           LOG(ERR, "Option -S requires a hex pattern argument.");
           print_usage(argv[0]);
+          rc = -1;
           goto cleanup;
         }
         if (hex_string_to_bytes(optarg, ssd_pattern, DIST_FS_SSD_PATTERN_SZ) ==
             -1) {
           LOG(ERR, "Invalid hex pattern for --ssd_echo: %s", optarg);
+          rc = -1;
           goto cleanup;
         }
         ssd_echo(ssd_pattern);
@@ -142,6 +146,7 @@ int main(int argc, char *argv[]) {
         if (optarg == NULL) {
           LOG(ERR, "Option -r requires both <offset> and <size> arguments.");
           print_usage(argv[0]);
+          rc = -1;
           goto cleanup;
         }
 
@@ -150,12 +155,14 @@ int main(int argc, char *argv[]) {
         if (optind >= argc) {
           LOG(ERR, "Missing size argument for --reset");
           print_usage(argv[0]);
+          rc = -1;
           goto cleanup;
         }
 
         reset_size = strtol(argv[optind++], NULL, 10);
         if (reset_size == 0) {
           LOG(ERR, "Invalid size for --reset: %s", argv[optind - 1]);
+          rc = -1;
           goto cleanup;
         }
 
@@ -169,6 +176,7 @@ int main(int argc, char *argv[]) {
       default:
         LOG(ERR, "Unknown option: -%c", option);
         print_usage(argv[0]);
+        rc = -1;
         goto cleanup;
     }
   }
