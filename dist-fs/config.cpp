@@ -24,11 +24,19 @@ static void print_config(const config_info_t *config_ctx) {
 }
 
 void config_cleanup(config_info_t *config_ctx) {
+  if (config_ctx == NULL) {
+    return;
+  }
   free(config_ctx->drive_full_path);
+  config_ctx->drive_full_path = NULL;
   free(config_ctx->host);
+  config_ctx->host = NULL;
   free(config_ctx->backup_schedule);
+  config_ctx->backup_schedule = NULL;
   free(config_ctx->backup_directory);
+  config_ctx->backup_directory = NULL;
   free(config_ctx->log_directory);
+  config_ctx->log_directory = NULL;
 }
 
 int parse_config(const char *filename, config_info_t *config_ctx) {

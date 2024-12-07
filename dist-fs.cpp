@@ -75,16 +75,17 @@ int main(int argc, char *argv[]) {
 
   // set a default name for config
   const char *config_file = "../dist-fs.conf";
-  config_info_t dist_fs_config;
+  config_info_t config_ctx = {};
 
   // parse config file
-  int rc = parse_config(config_file, &dist_fs_config);
+  int rc = parse_config(config_file, &config_ctx);
   if (rc != 0) {
     LOG(ERR,
         "Error while parsing config file : {%s} errno : {%d}",
         config_file,
         rc);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
   // parse command line options
@@ -94,40 +95,45 @@ int main(int argc, char *argv[]) {
         if (optarg == NULL) {
           LOG(ERR, "Option -u requires a file argument.");
           print_usage(argv[0]);
-          return -1;
+          rc = -1;
+          goto cleanup;
         }
         upload_file(optarg);
         break;
+
       case 'd': // --download
         if (optarg == NULL) {
           LOG(ERR, "Option -d requires a file argument.");
           print_usage(argv[0]);
-          return -1;
+          goto cleanup;
         }
         download_file(optarg);
         break;
+
       case 'D': // --delete
         if (optarg == NULL) {
           LOG(ERR, "Option -D requires a file argument.");
           print_usage(argv[0]);
-          return -1;
+          goto cleanup;
         }
         delete_file(optarg);
         break;
+
       case 'l': // --list
         list_files();
         drive_info();
         break;
+
       case 'S': // --ssd_echo
         if (optarg == NULL) {
           LOG(ERR, "Option -S requires a hex pattern argument.");
           print_usage(argv[0]);
-          return -1;
+          goto cleanup;
         }
         if (hex_string_to_bytes(optarg, ssd_pattern, DIST_FS_SSD_PATTERN_SZ) ==
             -1) {
           LOG(ERR, "Invalid hex pattern for --ssd_echo: %s", optarg);
-          return -1;
+          goto cleanup;
         }
         ssd_echo(ssd_pattern);
         break;
@@ -136,24 +142,21 @@ int main(int argc, char *argv[]) {
         if (optarg == NULL) {
           LOG(ERR, "Option -r requires both <offset> and <size> arguments.");
           print_usage(argv[0]);
-          return -1;
+          goto cleanup;
         }
 
-        // parse offset from optarg (first argument after -r)
         reset_offset = strtol(optarg, NULL, 16);
 
-        // ensure the next argument is provided for size
         if (optind >= argc) {
           LOG(ERR, "Missing size argument for --reset");
           print_usage(argv[0]);
-          return -1;
+          goto cleanup;
         }
 
-        // parse size from the next argument
         reset_size = strtol(argv[optind++], NULL, 10);
         if (reset_size == 0) {
           LOG(ERR, "Invalid size for --reset: %s", argv[optind - 1]);
-          return -1;
+          goto cleanup;
         }
 
         ssd_reset(reset_offset, reset_size);
@@ -161,21 +164,22 @@ int main(int argc, char *argv[]) {
 
       case 'h': // --help
         print_usage(argv[0]);
-        ;
         break;
 
       default:
         LOG(ERR, "Unknown option: -%c", option);
         print_usage(argv[0]);
-        return -1;
+        goto cleanup;
     }
   }
 
   if (optind < argc) {
     LOG(ERR, "Unexpected additional argument: %s", argv[optind]);
     print_usage(argv[0]);
-    return -1;
+    goto cleanup;
   }
 
-  return 0;
+cleanup:
+  config_cleanup(&config_ctx);
+  return rc;
 }
