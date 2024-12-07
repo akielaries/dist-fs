@@ -12,5 +12,5 @@ typedef struct {
   int log_retention_days; // Log retention days
 } config_info_t;
 
-
-int parse_config(const char *filename, config_info_t *config_struct);
+void config_cleanup(config_info_t *config_ctx);
+int parse_config(const char *filename, config_info_t *config_ctx);
