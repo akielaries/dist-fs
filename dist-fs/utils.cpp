@@ -79,12 +79,12 @@ void log(log_level_e level,
 }
 
 std::string strip_newline(const char *ctime_str) {
-    if (ctime_str == nullptr) {
-        return "";
-    }
-    std::string result(ctime_str);
-    if (!result.empty() && result.back() == '\n') {
-        result.pop_back();
-    }
-    return result;
+  if (ctime_str == nullptr) {
+    return "";
+  }
+  std::string result(ctime_str);
+  if (!result.empty() && result.back() == '\n') {
+    result.pop_back();
+  }
+  return result;
 }

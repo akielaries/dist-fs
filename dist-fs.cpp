@@ -44,8 +44,8 @@ static void print_usage(const char *program_name) {
 
 
 static int hex_string_to_bytes(const char *hex_string,
-                        uint8_t *buffer,
-                        uint32_t buffer_size) {
+                               uint8_t *buffer,
+                               uint32_t buffer_size) {
   size_t hex_len = strlen(hex_string);
   if (hex_len % 2 != 0 || hex_len / 2 > buffer_size)
     return -1;
@@ -80,7 +80,10 @@ int main(int argc, char *argv[]) {
   // parse config file
   int rc = parse_config(config_file, &dist_fs_config);
   if (rc != 0) {
-    LOG(ERR, "Error while parsing config file : {%s} errno : {%d}", config_file, rc);
+    LOG(ERR,
+        "Error while parsing config file : {%s} errno : {%d}",
+        config_file,
+        rc);
     return -1;
   }
 
@@ -157,7 +160,8 @@ int main(int argc, char *argv[]) {
         break;
 
       case 'h': // --help
-        print_usage(argv[0]);;
+        print_usage(argv[0]);
+        ;
         break;
 
       default:

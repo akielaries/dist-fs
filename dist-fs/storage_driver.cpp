@@ -20,7 +20,8 @@ constexpr const off_t METADATA_TABLE_OFFSET = 0;
 // max files I want to track for now...
 constexpr const size_t MAX_FILES = 1024;
 // total size of the metadata table
-constexpr const size_t METADATA_TABLE_SZ = sizeof(storage_metadata_t) * MAX_FILES;
+constexpr const size_t METADATA_TABLE_SZ =
+  sizeof(storage_metadata_t) * MAX_FILES;
 
 
 // metadata table operations
@@ -56,9 +57,11 @@ std::vector<storage_metadata_t> metadata_table_read(int ssd_fd) {
   return metadata_table;
 }
 
-static bool
-metadata_table_write(int ssd_fd, const storage_metadata_t &entry, size_t index) {
-  off_t entry_offset = METADATA_TABLE_OFFSET + (index * sizeof(storage_metadata_t));
+static bool metadata_table_write(int ssd_fd,
+                                 const storage_metadata_t &entry,
+                                 size_t index) {
+  off_t entry_offset =
+    METADATA_TABLE_OFFSET + (index * sizeof(storage_metadata_t));
   LOG(INFO, "Writing metadata entry at offset: 0x%08lX", entry_offset);
 
   // seek to the metadata entry offset
@@ -128,8 +131,8 @@ metadata_table_print(const std::vector<storage_metadata_t> &metadata_table) {
   return 0;
 }
 
-static off_t
-metadata_table_find_offset(const std::vector<storage_metadata_t> &metadata_table) {
+static off_t metadata_table_find_offset(
+  const std::vector<storage_metadata_t> &metadata_table) {
   LOG(INFO, "Finding next free offset for file storage");
   const off_t METADATA_SIZE = MAX_FILES * sizeof(storage_metadata_t);
   LOG(INFO, "Metadata Size          : %d", METADATA_SIZE);
@@ -192,7 +195,7 @@ int upload_file(const char *filename) {
   std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
   off_t next_offset = metadata_table_find_offset(metadata_table);
   file_info.offset = next_offset;
- 
+
   LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
   LOG(INFO, "Creating FS header");
   LOG(INFO, " start bytes: 0x%8X", DIST_FS_SSD_HEADER);
@@ -205,7 +208,8 @@ int upload_file(const char *filename) {
       ((file_info.size / 1024) / 1024) / 1024);
   LOG(INFO, " file type: %d", file_info.type);
   LOG(INFO, " file offset: %d", file_info.offset);
-  LOG(INFO, " file timestamp: %s", 
+  LOG(INFO,
+      " file timestamp: %s",
       strip_newline(std::ctime(&file_info.timestamp)).c_str());
   LOG(INFO, "Writing FS header at offset: 0x%08lX", next_offset);
   // TODO/BUG: why does endianness matter here? I suspect something fishy
