@@ -20,14 +20,14 @@ constexpr const off_t METADATA_TABLE_OFFSET = 0;
 // max files I want to track for now...
 constexpr const size_t MAX_FILES = 1024;
 // total size of the metadata table
-constexpr const size_t METADATA_TABLE_SZ = sizeof(ssd_metadata_t) * MAX_FILES;
+constexpr const size_t METADATA_TABLE_SZ = sizeof(storage_metadata_t) * MAX_FILES;
 
 
 // metadata table operations
 /*****************************************************************************/
-std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd) {
+std::vector<storage_metadata_t> metadata_table_read(int ssd_fd) {
   LOG(INFO, "Reading SSD metadata table");
-  std::vector<ssd_metadata_t> metadata_table;
+  std::vector<storage_metadata_t> metadata_table;
 
   // seek from beginning of file
   if (lseek(ssd_fd, 0, SEEK_SET) == -1) {
@@ -44,8 +44,8 @@ std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd) {
   }
 
   // parse metadata entries
-  ssd_metadata_t *entries = reinterpret_cast<ssd_metadata_t *>(buffer);
-  size_t num_entries = bytes_read / sizeof(ssd_metadata_t);
+  storage_metadata_t *entries = reinterpret_cast<storage_metadata_t *>(buffer);
+  size_t num_entries = bytes_read / sizeof(storage_metadata_t);
 
   for (size_t i = 0; i < num_entries; ++i) {
     if (entries[i].start_offset != 0) { // valid entry check
@@ -57,8 +57,8 @@ std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd) {
 }
 
 static bool
-metadata_table_write(int ssd_fd, const ssd_metadata_t &entry, size_t index) {
-  off_t entry_offset = METADATA_TABLE_OFFSET + (index * sizeof(ssd_metadata_t));
+metadata_table_write(int ssd_fd, const storage_metadata_t &entry, size_t index) {
+  off_t entry_offset = METADATA_TABLE_OFFSET + (index * sizeof(storage_metadata_t));
   LOG(INFO, "Writing metadata entry at offset: 0x%08lX", entry_offset);
 
   // seek to the metadata entry offset
@@ -84,7 +84,7 @@ metadata_table_write(int ssd_fd, const ssd_metadata_t &entry, size_t index) {
 }
 
 static int
-metadata_table_print(const std::vector<ssd_metadata_t> &metadata_table) {
+metadata_table_print(const std::vector<storage_metadata_t> &metadata_table) {
   // each column will have a dynamic size
   size_t max_filename_length = 0;
   size_t max_offset_length = 0;
@@ -129,12 +129,12 @@ metadata_table_print(const std::vector<ssd_metadata_t> &metadata_table) {
 }
 
 static off_t
-metadata_table_find_offset(const std::vector<ssd_metadata_t> &metadata_table) {
+metadata_table_find_offset(const std::vector<storage_metadata_t> &metadata_table) {
   LOG(INFO, "Finding next free offset for file storage");
-  const off_t METADATA_SIZE = MAX_FILES * sizeof(ssd_metadata_t);
+  const off_t METADATA_SIZE = MAX_FILES * sizeof(storage_metadata_t);
   LOG(INFO, "Metadata Size          : %d", METADATA_SIZE);
   LOG(INFO, "Max files              : %d", MAX_FILES);
-  LOG(INFO, "sizeof(ssd_metadata_t) : %d", sizeof(ssd_metadata_t));
+  LOG(INFO, "sizeof(storage_metadata_t) : %d", sizeof(storage_metadata_t));
   if (metadata_table.empty()) {
     LOG(INFO, "No files, starting right after metadata section");
     return METADATA_SIZE;
@@ -189,7 +189,7 @@ int upload_file(const char *filename) {
   }
 
   // read from the metadata table to get the next available offset in the FS
-  std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
   off_t next_offset = metadata_table_find_offset(metadata_table);
   file_info.offset = next_offset;
  
@@ -280,7 +280,7 @@ int upload_file(const char *filename) {
       upload_speed / 1024,
       upload_speed / 1024 / 1024);
 
-  ssd_metadata_t new_entry = {};
+  storage_metadata_t new_entry = {};
   strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
   new_entry.start_offset = file_info.offset;
   new_entry.size = file_info.size;
@@ -329,7 +329,7 @@ int delete_file(const char *filename) {
   }
 
   // read the metadata table
-  std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
 
   // search for filename in metadata table
   LOG(INFO, "Searching for file: %s in metadata table", filename);
@@ -348,7 +348,7 @@ int delete_file(const char *filename) {
     return -1;
   }
 
-  const ssd_metadata_t &file_entry = metadata_table[file_index];
+  const storage_metadata_t &file_entry = metadata_table[file_index];
   LOG(INFO,
       "Found file %s with offset 0x%x and size %u bytes",
       file_entry.filename,
@@ -394,7 +394,7 @@ int delete_file(const char *filename) {
   }
 
   // zero out the unused metadata entry space
-  ssd_metadata_t empty_entry = {};
+  storage_metadata_t empty_entry = {};
   size_t empty_index = metadata_table.size();
   LOG(INFO, "Zeroing out unused metadata entry space");
   if (!metadata_table_write(ssd_fd, empty_entry, empty_index)) {
@@ -424,7 +424,7 @@ int list_files() {
   }
 
   // read the metadata table
-  std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
 
   LOG(INFO, "Number of files : %d", metadata_table.size());
   metadata_table_print(metadata_table);

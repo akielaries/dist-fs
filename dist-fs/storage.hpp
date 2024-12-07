@@ -11,7 +11,7 @@
 // these are the start bytes for each file in the file system
 #define DIST_FS_SSD_HEADER 0xDEADBEEF
 
-// the drive!!
+// the drive!! TODO: make this configurable, from cmd line? from config file?
 #define DEVICE_PATH "/dev/disk/by-id/usb-Seagate_Slim_SL_NA710NYN-0:0"
 
 /** @brief SSD metadata table info */
@@ -19,13 +19,13 @@ typedef struct {
   char filename[256]; // name
   off_t start_offset; // offset on ssd
   size_t size;        // file size in bytes
-} ssd_metadata_t;
+} storage_metadata_t;
 
 
 /* hard drive operations */
 int drive_info();
 
-std::vector<ssd_metadata_t> metadata_table_read(int ssd_fd);
+std::vector<storage_metadata_t> metadata_table_read(int ssd_fd);
 
 /* main SSD operations */
 int upload_file(const char *filename);
