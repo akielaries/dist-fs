@@ -1,3 +1,6 @@
+/**
+ * some miscellaneous utility functions
+ */
 #include <string>
 #include <iostream>
 #include <sstream>

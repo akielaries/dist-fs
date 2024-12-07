@@ -15,12 +15,13 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "dist-fs/utils.hpp"
+#include "dist-fs/config.hpp"
 #include "dist-fs/audio_files.hpp"
 #include "dist-fs/storage.hpp"
-#include "dist-fs/utils.hpp"
 
 
-void print_usage(const char *program_name) {
+static void print_usage(const char *program_name) {
   printf("Usage: %s [OPTIONS]\n", program_name);
   printf("Options:\n");
   printf("  -h, --help               Print usage of %s\n", program_name);
@@ -42,7 +43,7 @@ void print_usage(const char *program_name) {
 }
 
 
-int hex_string_to_bytes(const char *hex_string,
+static int hex_string_to_bytes(const char *hex_string,
                         uint8_t *buffer,
                         uint32_t buffer_size) {
   size_t hex_len = strlen(hex_string);
@@ -72,6 +73,18 @@ int main(int argc, char *argv[]) {
   off_t reset_offset = 0;
   size_t reset_size = 0;
 
+  // set a default name for config
+  const char *config_file = "../dist-fs.conf";
+  config_info_t dist_fs_config;
+
+  // parse config file
+  int rc = parse_config(config_file, &dist_fs_config);
+  if (rc != 0) {
+    LOG(ERR, "Error while parsing config file : {%s} errno : {%d}", config_file, rc);
+    return -1;
+  }
+
+  // parse command line options
   while ((option = getopt(argc, argv, "u:d:D:lS:r:h")) != -1) {
     switch (option) {
       case 'u': // --upload
