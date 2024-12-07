@@ -9,7 +9,7 @@
 #include "utils.hpp"
 
 
-static void print_config(const config_info_t *config_ctx) {
+static void print_config(const config_context_t *config_ctx) {
   LOG(INFO, "Configuration Info:");
   printf("  Storage Path:       %s\n", config_ctx->drive_full_path);
   printf("  Host:               %s\n", config_ctx->host);
@@ -23,7 +23,7 @@ static void print_config(const config_info_t *config_ctx) {
   printf("  Log Retention Days: %d\n", config_ctx->log_retention_days);
 }
 
-void config_cleanup(config_info_t *config_ctx) {
+void config_cleanup(config_context_t *config_ctx) {
   if (config_ctx == NULL) {
     return;
   }
@@ -39,7 +39,7 @@ void config_cleanup(config_info_t *config_ctx) {
   config_ctx->log_directory = NULL;
 }
 
-int parse_config(const char *filename, config_info_t *config_ctx) {
+int parse_config(const char *filename, config_context_t *config_ctx) {
   LOG(INFO, "Parsing config : {%s}", filename);
   FILE *file = fopen(filename, "r");
   if (!file) {

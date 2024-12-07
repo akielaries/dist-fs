@@ -10,7 +10,7 @@ typedef struct {
   char *log_directory;    // Log directory
   int log_rotation_size;  // Log rotation size in MB
   int log_retention_days; // Log retention days
-} config_info_t;
+} config_context_t;
 
-void config_cleanup(config_info_t *config_ctx);
-int parse_config(const char *filename, config_info_t *config_ctx);
+void config_cleanup(config_context_t *config_ctx);
+int parse_config(const char *filename, config_context_t *config_ctx);

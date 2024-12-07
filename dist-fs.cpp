@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 
   // set a default name for config
   const char *config_file = "../dist-fs.conf";
-  config_info_t config_ctx = {};
+  config_context_t config_ctx = {};
 
   // parse config file
   int rc = parse_config(config_file, &config_ctx);
