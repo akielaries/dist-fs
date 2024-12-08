@@ -135,7 +135,7 @@ int get_file_info(file_info_t &file_info, const char *filename) {
   // to start of the stream
   audio_file.seekg(0, std::ios::end);
   std::streamsize file_size = audio_file.tellg();
-  file_info.size = file_size;
+  file_info.size            = file_size;
   // reset pointer to start of file
   audio_file.seekg(0, std::ios::beg);
   LOG(INFO, "File size: %ld bytes", file_size);

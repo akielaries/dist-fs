@@ -58,7 +58,7 @@ int parse_config(const char *filename, config_context_t *config_ctx) {
     line[strcspn(line, "\n")] = '\0';
 
     // parse key-value pairs
-    char *key = strtok(line, " =");
+    char *key   = strtok(line, " =");
     char *value = strtok(NULL, " =");
 
     if (!key || !value) {

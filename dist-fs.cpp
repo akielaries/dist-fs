@@ -70,11 +70,11 @@ int main(int argc, char *argv[]) {
 
   int option;
   uint8_t ssd_pattern[DIST_FS_SSD_PATTERN_SZ] = {0};
-  off_t reset_offset = 0;
-  size_t reset_size = 0;
+  off_t reset_offset                          = 0;
+  size_t reset_size                           = 0;
 
   // set a default name for config
-  const char *config_file = "../dist-fs.conf";
+  const char *config_file     = "../dist-fs.conf";
   config_context_t config_ctx = {};
 
   // parse config file

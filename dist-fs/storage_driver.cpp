@@ -38,7 +38,7 @@ std::vector<storage_metadata_t> metadata_table_read(int ssd_fd) {
 
   // read the metadata section
   char buffer[METADATA_TABLE_SZ] = {0};
-  ssize_t bytes_read = read(ssd_fd, buffer, 278528);
+  ssize_t bytes_read             = read(ssd_fd, buffer, 278528);
   if (bytes_read <= 0) {
     LOG(INFO, "No metadata found. Initializing empty table.");
     return metadata_table;
@@ -46,7 +46,7 @@ std::vector<storage_metadata_t> metadata_table_read(int ssd_fd) {
 
   // parse metadata entries
   storage_metadata_t *entries = reinterpret_cast<storage_metadata_t *>(buffer);
-  size_t num_entries = bytes_read / sizeof(storage_metadata_t);
+  size_t num_entries          = bytes_read / sizeof(storage_metadata_t);
 
   for (size_t i = 0; i < num_entries; ++i) {
     if (entries[i].start_offset != 0) { // valid entry check
@@ -90,8 +90,8 @@ static int
 metadata_table_print(const std::vector<storage_metadata_t> &metadata_table) {
   // each column will have a dynamic size
   size_t max_filename_length = 0;
-  size_t max_offset_length = 0;
-  size_t max_size_length = 0;
+  size_t max_offset_length   = 0;
+  size_t max_size_length     = 0;
 
   for (const auto &entry : metadata_table) {
     max_filename_length = std::max(max_filename_length, strlen(entry.filename));
@@ -103,8 +103,8 @@ metadata_table_print(const std::vector<storage_metadata_t> &metadata_table) {
 
   // cast size_t to int for setw
   int filename_width = static_cast<int>(max_filename_length);
-  int offset_width = static_cast<int>(max_offset_length);
-  int size_width = static_cast<int>(max_size_length);
+  int offset_width   = static_cast<int>(max_offset_length);
+  int size_width     = static_cast<int>(max_size_length);
 
   // print the header row with dynamic column widths
   std::cout << std::left << std::setw(filename_width) << "\nName"
@@ -194,7 +194,7 @@ int upload_file(const char *filename) {
   // read from the metadata table to get the next available offset in the FS
   std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
   off_t next_offset = metadata_table_find_offset(metadata_table);
-  file_info.offset = next_offset;
+  file_info.offset  = next_offset;
 
   LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
   LOG(INFO, "Creating FS header");
@@ -287,7 +287,7 @@ int upload_file(const char *filename) {
   storage_metadata_t new_entry = {};
   strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
   new_entry.start_offset = file_info.offset;
-  new_entry.size = file_info.size;
+  new_entry.size         = file_info.size;
 
   LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
   LOG(INFO, " start_offset : %d", new_entry.start_offset);
@@ -399,7 +399,7 @@ int delete_file(const char *filename) {
 
   // zero out the unused metadata entry space
   storage_metadata_t empty_entry = {};
-  size_t empty_index = metadata_table.size();
+  size_t empty_index             = metadata_table.size();
   LOG(INFO, "Zeroing out unused metadata entry space");
   if (!metadata_table_write(ssd_fd, empty_entry, empty_index)) {
     LOG(ERR,

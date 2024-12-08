@@ -26,7 +26,7 @@ std::string hex_to_ascii(uint64_t hex_value) {
   std::ostringstream oss;
   for (int i = 0; i < 8; ++i) {
     int shift = big_endian ? (7 - i) * 8 : i * 8;
-    char ch = (hex_value >> shift) & 0xFF;
+    char ch   = (hex_value >> shift) & 0xFF;
 
     // Convert non-printable characters to '.'
     oss << (std::isprint(static_cast<unsigned char>(ch)) ? ch : '.');
