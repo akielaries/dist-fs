@@ -43,9 +43,13 @@ static comm_driver_t *find_comm_driver(comm_types_e type) {
 }
 
 /** brief top level initialize function */
-comm_context_t *comm_init(comm_types_e type, const char *device, uint32_t baud) {
-  LOG(INFO, "Initializing comm driver type {%d} on device {%s} with baud {%u}...", 
-      type, device, baud);
+comm_context_t *
+comm_init(comm_types_e type, const char *device, uint32_t baud) {
+  LOG(INFO,
+      "Initializing comm driver type {%d} on device {%s} with baud {%u}...",
+      type,
+      device,
+      baud);
 
   // find the driver for the given comm type
   comm_driver_t *driver = find_comm_driver(type);
@@ -56,7 +60,7 @@ comm_context_t *comm_init(comm_types_e type, const char *device, uint32_t baud) 
 
   // init the static context
   memset(&gl_comm_ctx, 0, sizeof(gl_comm_ctx));
-  gl_comm_ctx.type = type;
+  gl_comm_ctx.type   = type;
   gl_comm_ctx.driver = driver;
   strncpy(gl_comm_ctx.device, device, sizeof(gl_comm_ctx.device) - 1);
   gl_comm_ctx.baud = baud;

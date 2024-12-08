@@ -71,20 +71,18 @@ static int configure_uart(int fd, uint32_t baud) {
   cfsetospeed(&tty, baud_rate);
   cfsetispeed(&tty, baud_rate);
 
-  // Configure 8N1 (8-bit data, no parity, 1 stop bit)
+  // 8N1 (8-bit data, no parity, 1 stop bit)
   tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit data
-  tty.c_cflag &= ~PARENB;                     // No parity
+  tty.c_cflag &= ~PARENB;                     // no parity
   tty.c_cflag &= ~CSTOPB;                     // 1 stop bit
-  tty.c_cflag |= CREAD | CLOCAL; // Enable receiver, ignore modem lines
-
-  // Raw input/output mode
-  tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // Disable line input, echo
-  tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Disable software flow control
-  tty.c_oflag &= ~OPOST;                  // Disable post-processing
-
-  // Set timeout
-  tty.c_cc[VMIN]  = 0; // No minimum characters
-  tty.c_cc[VTIME] = 1; // 0.1 second timeout
+  // the rest of these settings are sort of trial/error from other device driver
+  // work
+  tty.c_cflag |= CREAD | CLOCAL; // enable receiver, ignore modem lines
+  tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // disable line input, echo
+  tty.c_iflag &= ~(IXON | IXOFF | IXANY); // disable software flow control
+  tty.c_oflag &= ~OPOST;                  // disable post-processing
+  tty.c_cc[VMIN]  = 0;                    // no minimum characters
+  tty.c_cc[VTIME] = 1;                    // 0.1 second timeout
 
   if (tcsetattr(fd, TCSANOW, &tty) != 0) {
     LOG(ERR, "Failed to set UART attributes");
@@ -98,17 +96,15 @@ static int uart_init(comm_context_t *ctx) {
   if (!ctx)
     return -EINVAL;
 
-  // Open the UART device
-  //const char *device = "/dev/ttyS0"; // Default device; customize as needed
   LOG(INFO, "Opening UART device: %s", ctx->device);
 
-  int fd             = open(ctx->device, O_RDWR | O_NOCTTY | O_SYNC);
+  int fd = open(ctx->device, O_RDWR | O_NOCTTY | O_SYNC);
   if (fd < 0) {
     LOG(ERR, "Failed to open UART device");
     return -errno;
   }
 
-  // Configure UART
+  // configure UART with some termios settings
   if (configure_uart(fd, ctx->baud) < 0) {
     close(fd);
     return -1;
@@ -116,7 +112,7 @@ static int uart_init(comm_context_t *ctx) {
 
   // set global UART file descriptor
   uart_fd = fd;
-  //ctx->driver = (comm_driver_t *)(uintptr_t)fd;
+  // ctx->driver = (comm_driver_t *)(uintptr_t)fd;
   return 0;
 }
 
@@ -124,7 +120,6 @@ static int uart_read_one(comm_context_t *ctx, uint16_t timeout_ms) {
   if (!ctx || !ctx->driver)
     return -EINVAL;
 
-  int uart_fd            = (int)(uintptr_t)ctx->driver;
   uint8_t byte      = 0;
   struct pollfd pfd = {.fd = uart_fd, .events = POLLIN, .revents = 0};
   int ret           = poll(&pfd, 1, timeout_ms);
@@ -142,8 +137,6 @@ static int uart_read(comm_context_t *ctx,
                      uint32_t *rx,
                      uint16_t rx_sz,
                      uint16_t timeout_ms) {
-  LOG(INFO, "uart_read()");
-
   if (!ctx || !ctx->driver || !rx)
     return -EINVAL;
 
@@ -153,14 +146,15 @@ static int uart_read(comm_context_t *ctx,
   while (bytes_read < rx_sz) {
     int ret = poll(&pfd, 1, timeout_ms);
     if (ret > 0 && (pfd.revents & POLLIN)) {
-      ssize_t r = read(uart_fd, ((uint8_t *)rx) + bytes_read, rx_sz - bytes_read);
+      ssize_t r =
+        read(uart_fd, ((uint8_t *)rx) + bytes_read, rx_sz - bytes_read);
       if (r > 0) {
         bytes_read += r;
       } else {
         return -errno;
       }
     } else if (ret == 0) {
-      break; // Timeout
+      break;
     } else {
       return -errno;
     }
@@ -178,7 +172,6 @@ uart_write_one(comm_context_t *ctx, uint32_t tx, uint16_t timeout_ms) {
   if (!ctx || !ctx->driver)
     return -EINVAL;
 
-  int uart_fd       = (int)(uintptr_t)ctx->driver;
   uint8_t byte = (uint8_t)tx;
 
   struct pollfd pfd = {.fd = uart_fd, .events = POLLOUT, .revents = 0};
@@ -198,15 +191,15 @@ static int uart_write(comm_context_t *ctx,
   if (!ctx || !ctx->driver || !tx)
     return -EINVAL;
 
-  int uart_fd                = (int)(uintptr_t)ctx->driver;
   struct pollfd pfd     = {.fd = uart_fd, .events = POLLOUT, .revents = 0};
   ssize_t bytes_written = 0;
 
   while (bytes_written < tx_size) {
     int ret = poll(&pfd, 1, timeout_ms);
     if (ret > 0 && (pfd.revents & POLLOUT)) {
-      ssize_t w =
-        write(uart_fd, ((uint8_t *)tx) + bytes_written, tx_size - bytes_written);
+      ssize_t w = write(uart_fd,
+                        ((uint8_t *)tx) + bytes_written,
+                        tx_size - bytes_written);
       if (w > 0) {
         bytes_written += w;
       } else {
@@ -230,6 +223,5 @@ static int uart_ioctl(comm_context_t *ctx, uint32_t opcode, void *data) {
   if (!ctx || !ctx->driver)
     return -EINVAL;
 
-  int uart_fd = (int)(uintptr_t)ctx->driver;
   return ioctl(uart_fd, opcode, data);
 }
