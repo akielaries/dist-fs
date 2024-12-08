@@ -42,7 +42,6 @@ static void print_usage(const char *program_name) {
          "operations.\n");
 }
 
-
 static int hex_string_to_bytes(const char *hex_string,
                                uint8_t *buffer,
                                uint32_t buffer_size) {

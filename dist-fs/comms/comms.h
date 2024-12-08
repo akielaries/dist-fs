@@ -6,37 +6,12 @@
 #include <stdio.h>
 #include <time.h>
 
-#define LVL_INFO  1
-#define LVL_WARN  2
-#define LVL_ERROR 3
 
-#define LOG(level, fmt, ...)                                                   \
-  do {                                                                         \
-    const char *level_str;                                                     \
-    switch (level) {                                                           \
-      case LVL_INFO:                                                           \
-        level_str = "INFO";                                                    \
-        break;                                                                 \
-      case LVL_WARN:                                                           \
-        level_str = "WARN";                                                    \
-        break;                                                                 \
-      case LVL_ERROR:                                                          \
-        level_str = "ERROR";                                                   \
-        break;                                                                 \
-      default:                                                                 \
-        level_str = "LOG";                                                     \
-    }                                                                          \
-    time_t now         = time(NULL);                                           \
-    struct tm *tm_info = localtime(&now);                                      \
-    char time_buffer[26];                                                      \
-    strftime(time_buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);                   \
-    printf("[%s] [%s] " fmt "\n", time_buffer, level_str, ##__VA_ARGS__);      \
-  } while (0)
-
+typedef struct comm_driver_t comm_driver_t;
 
 typedef enum {
   COMMS_SPI = 0,
-  COMMS_ANALOG,
+  COMMS_NETWORK,
   COMMS_UART,
   COMMS_I2C,
   COMMS_END,
@@ -46,9 +21,10 @@ typedef enum {
 typedef struct {
   uint8_t type;
   uint32_t baud;
+  comm_driver_t  *driver;
 } comm_context_t;
 
-typedef struct {
+typedef struct comm_driver_t {
   /**
    * @brief initialize comms + type
    */
@@ -109,5 +85,10 @@ typedef struct {
    */
   int (*ioctl)(comm_context_t *ctx, uint32_t opcode, void *data);
 } comm_driver_t;
+
+/**
+ * @brief top level comms initialize function. this sets up the driver and context
+ */
+comm_context_t *comm_init(comm_types_e type);
 
 #endif

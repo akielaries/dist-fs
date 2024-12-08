@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 set(PROJECT_NAME dist-fs)
-project(${PROJECT_NAME} LANGUAGES CXX C)
+project(${PROJECT_NAME} LANGUAGES CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -25,6 +25,8 @@ add_compile_options(
 
 # C sources
 file(GLOB_RECURSE C_SOURCES dist-fs/*.c)
+SET_SOURCE_FILES_PROPERTIES(${C_SOURCES} PROPERTIES LANGUAGE CXX )
+
 # C++ sources 
 file(GLOB_RECURSE CPP_SOURCES dist-fs/*.cpp)
 # main driver file
