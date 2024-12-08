@@ -13,17 +13,17 @@ extern comm_driver_t network_ops;
 
 /** @brief registry struct */
 typedef struct {
-  comm_types_e   type;
-  comm_driver_t  *ops;
+  comm_types_e type;
+  comm_driver_t *ops;
 } comm_driver_entry_t;
 
 /** @brief driver registry table */
 static comm_driver_entry_t comm_driver_registry[] = {
-  { COMMS_SPI,  &spi_ops },
-  { COMMS_UART,  &uart_ops },
-  { COMMS_I2C,  &i2c_ops },
-  { COMMS_NETWORK,    &network_ops },
-  { COMMS_END,        NULL }, // termination
+  {COMMS_SPI, &spi_ops},
+  {COMMS_UART, &uart_ops},
+  {COMMS_I2C, &i2c_ops},
+  {COMMS_NETWORK, &network_ops},
+  {COMMS_END, NULL}, // termination
 };
 
 /** @brief static comm ctx */
@@ -31,7 +31,7 @@ static comm_context_t gl_comm_ctx;
 
 /** @brief device driver registry lookup */
 static comm_driver_t *find_comm_driver(comm_types_e type) {
-  //printf("finding comm driver type {%d} from registry...\n", type);
+  // printf("finding comm driver type {%d} from registry...\n", type);
   LOG(INFO, "finding comm driver type {%d} from registry...\n", type);
 
   for (int i = 0; comm_driver_registry[i].type != COMMS_END; ++i) {
@@ -54,7 +54,7 @@ comm_context_t *comm_init(comm_types_e type) {
   }
 
   // init the static context
-  gl_comm_ctx.type = type;
+  gl_comm_ctx.type   = type;
   gl_comm_ctx.driver = driver;
   // ready to call the driver-specific init function
   if (driver->init(&gl_comm_ctx) < 0) {

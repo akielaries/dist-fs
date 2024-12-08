@@ -157,6 +157,8 @@ static off_t metadata_table_find_offset(
 // hard drive operations
 /*****************************************************************************/
 int drive_info() {
+  // TODO get the total size of the drive and use the metadata table to get
+  // how much of it is actually in use. should be fine with lseek?
   int rc = 0;
 
   //

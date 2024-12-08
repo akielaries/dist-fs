@@ -43,11 +43,11 @@ crow::json::wvalue metadata_to_json() {
 
   for (const auto &entry : metadata_table) {
     crow::json::wvalue file;
-    file["name"] = entry.filename;
-    file["offset"] = static_cast<int64_t>(entry.start_offset);
+    file["name"]       = entry.filename;
+    file["offset"]     = static_cast<int64_t>(entry.start_offset);
     file["size_bytes"] = static_cast<int64_t>(entry.size);
-    file["size_kb"] = entry.size / 1024;
-    file["size_mb"] = entry.size / (1024 * 1024);
+    file["size_kb"]    = entry.size / 1024;
+    file["size_mb"]    = entry.size / (1024 * 1024);
 
     files.push_back(std::move(file)); // Add the file object to the list
   }
