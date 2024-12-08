@@ -8,6 +8,8 @@
 #include <termios.h> // For UART settings
 #include <sys/ioctl.h>
 #include <sys/poll.h> // For poll() function
+
+#include "../utils.hpp"
 #include "comms.h"
 
 static int uart_init(comm_context_t *ctx);
@@ -33,13 +35,14 @@ comm_driver_t uart_ops = {
   .ioctl     = uart_ioctl,
 };
 
+static int uart_fd;
 
 // TODO : most of this implementation will need to be solidified. looks like
 // the context for this needs to be fleshed out
 static int configure_uart(int fd, uint32_t baud) {
   struct termios tty;
   if (tcgetattr(fd, &tty) != 0) {
-    perror("Failed to get UART attributes");
+    LOG(ERR, "Failed to get UART attributes");
     return -1;
   }
 
@@ -62,7 +65,7 @@ static int configure_uart(int fd, uint32_t baud) {
       baud_rate = B115200;
       break;
     default:
-      fprintf(stderr, "Unsupported baud rate: %u\n", baud);
+      LOG(ERR, "Unsupported baud rate: %u\n", baud);
       return -1;
   }
   cfsetospeed(&tty, baud_rate);
@@ -84,7 +87,7 @@ static int configure_uart(int fd, uint32_t baud) {
   tty.c_cc[VTIME] = 1; // 0.1 second timeout
 
   if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-    perror("Failed to set UART attributes");
+    LOG(ERR, "Failed to set UART attributes");
     return -1;
   }
 
@@ -96,10 +99,12 @@ static int uart_init(comm_context_t *ctx) {
     return -EINVAL;
 
   // Open the UART device
-  const char *device = "/dev/ttyS0"; // Default device; customize as needed
-  int fd             = open(device, O_RDWR | O_NOCTTY | O_SYNC);
+  //const char *device = "/dev/ttyS0"; // Default device; customize as needed
+  LOG(INFO, "Opening UART device: %s", ctx->device);
+
+  int fd             = open(ctx->device, O_RDWR | O_NOCTTY | O_SYNC);
   if (fd < 0) {
-    perror("Failed to open UART device");
+    LOG(ERR, "Failed to open UART device");
     return -errno;
   }
 
@@ -109,8 +114,9 @@ static int uart_init(comm_context_t *ctx) {
     return -1;
   }
 
-  // Store file descriptor in the context
-  ctx->driver = (comm_driver_t *)(uintptr_t)fd;
+  // set global UART file descriptor
+  uart_fd = fd;
+  //ctx->driver = (comm_driver_t *)(uintptr_t)fd;
   return 0;
 }
 
@@ -118,13 +124,13 @@ static int uart_read_one(comm_context_t *ctx, uint16_t timeout_ms) {
   if (!ctx || !ctx->driver)
     return -EINVAL;
 
-  int fd            = (int)(uintptr_t)ctx->driver;
+  int uart_fd            = (int)(uintptr_t)ctx->driver;
   uint8_t byte      = 0;
-  struct pollfd pfd = {.fd = fd, .events = POLLIN, .revents = 0};
+  struct pollfd pfd = {.fd = uart_fd, .events = POLLIN, .revents = 0};
   int ret           = poll(&pfd, 1, timeout_ms);
 
   if (ret > 0 && (pfd.revents & POLLIN)) {
-    if (read(fd, &byte, 1) == 1) {
+    if (read(uart_fd, &byte, 1) == 1) {
       return byte;
     }
   }
@@ -136,17 +142,18 @@ static int uart_read(comm_context_t *ctx,
                      uint32_t *rx,
                      uint16_t rx_sz,
                      uint16_t timeout_ms) {
+  LOG(INFO, "uart_read()");
+
   if (!ctx || !ctx->driver || !rx)
     return -EINVAL;
 
-  int fd             = (int)(uintptr_t)ctx->driver;
-  struct pollfd pfd  = {.fd = fd, .events = POLLIN, .revents = 0};
+  struct pollfd pfd  = {.fd = uart_fd, .events = POLLIN, .revents = 0};
   ssize_t bytes_read = 0;
 
   while (bytes_read < rx_sz) {
     int ret = poll(&pfd, 1, timeout_ms);
     if (ret > 0 && (pfd.revents & POLLIN)) {
-      ssize_t r = read(fd, ((uint8_t *)rx) + bytes_read, rx_sz - bytes_read);
+      ssize_t r = read(uart_fd, ((uint8_t *)rx) + bytes_read, rx_sz - bytes_read);
       if (r > 0) {
         bytes_read += r;
       } else {
@@ -171,14 +178,14 @@ uart_write_one(comm_context_t *ctx, uint32_t tx, uint16_t timeout_ms) {
   if (!ctx || !ctx->driver)
     return -EINVAL;
 
-  int fd       = (int)(uintptr_t)ctx->driver;
+  int uart_fd       = (int)(uintptr_t)ctx->driver;
   uint8_t byte = (uint8_t)tx;
 
-  struct pollfd pfd = {.fd = fd, .events = POLLOUT, .revents = 0};
+  struct pollfd pfd = {.fd = uart_fd, .events = POLLOUT, .revents = 0};
   int ret           = poll(&pfd, 1, timeout_ms);
 
   if (ret > 0 && (pfd.revents & POLLOUT)) {
-    return (write(fd, &byte, 1) == 1) ? 0 : -errno;
+    return (write(uart_fd, &byte, 1) == 1) ? 0 : -errno;
   }
 
   return (ret == 0) ? -ETIMEDOUT : -errno;
@@ -191,15 +198,15 @@ static int uart_write(comm_context_t *ctx,
   if (!ctx || !ctx->driver || !tx)
     return -EINVAL;
 
-  int fd                = (int)(uintptr_t)ctx->driver;
-  struct pollfd pfd     = {.fd = fd, .events = POLLOUT, .revents = 0};
+  int uart_fd                = (int)(uintptr_t)ctx->driver;
+  struct pollfd pfd     = {.fd = uart_fd, .events = POLLOUT, .revents = 0};
   ssize_t bytes_written = 0;
 
   while (bytes_written < tx_size) {
     int ret = poll(&pfd, 1, timeout_ms);
     if (ret > 0 && (pfd.revents & POLLOUT)) {
       ssize_t w =
-        write(fd, ((uint8_t *)tx) + bytes_written, tx_size - bytes_written);
+        write(uart_fd, ((uint8_t *)tx) + bytes_written, tx_size - bytes_written);
       if (w > 0) {
         bytes_written += w;
       } else {
@@ -223,6 +230,6 @@ static int uart_ioctl(comm_context_t *ctx, uint32_t opcode, void *data) {
   if (!ctx || !ctx->driver)
     return -EINVAL;
 
-  int fd = (int)(uintptr_t)ctx->driver;
-  return ioctl(fd, opcode, data);
+  int uart_fd = (int)(uintptr_t)ctx->driver;
+  return ioctl(uart_fd, opcode, data);
 }

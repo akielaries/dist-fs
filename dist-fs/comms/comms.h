@@ -21,6 +21,7 @@ typedef enum {
 typedef struct {
   uint8_t type;
   uint32_t baud;
+  char device[128];
   comm_driver_t *driver;
 } comm_context_t;
 
@@ -90,6 +91,6 @@ typedef struct comm_driver_t {
  * @brief top level comms initialize function. this sets up the driver and
  * context
  */
-comm_context_t *comm_init(comm_types_e type);
+comm_context_t *comm_init(comm_types_e type, const char *device, uint32_t baud);
 
 #endif

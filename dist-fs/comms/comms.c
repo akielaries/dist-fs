@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "../utils.hpp"
 #include "comms.h"
@@ -31,8 +32,7 @@ static comm_context_t gl_comm_ctx;
 
 /** @brief device driver registry lookup */
 static comm_driver_t *find_comm_driver(comm_types_e type) {
-  // printf("finding comm driver type {%d} from registry...\n", type);
-  LOG(INFO, "finding comm driver type {%d} from registry...\n", type);
+  LOG(INFO, "finding comm driver type {%d} from registry...", type);
 
   for (int i = 0; comm_driver_registry[i].type != COMMS_END; ++i) {
     if (comm_driver_registry[i].type == type) {
@@ -43,22 +43,28 @@ static comm_driver_t *find_comm_driver(comm_types_e type) {
 }
 
 /** brief top level initialize function */
-comm_context_t *comm_init(comm_types_e type) {
-  LOG(INFO, "intializing comm driver type {%d}...\n", type);
+comm_context_t *comm_init(comm_types_e type, const char *device, uint32_t baud) {
+  LOG(INFO, "Initializing comm driver type {%d} on device {%s} with baud {%u}...", 
+      type, device, baud);
 
   // find the driver for the given comm type
   comm_driver_t *driver = find_comm_driver(type);
   if (!driver || !driver->init) {
-    LOG(ERR, "error, no driver to init\n");
+    LOG(ERR, "error, no driver to init");
     return NULL; // driver not found or missing init function
   }
 
   // init the static context
-  gl_comm_ctx.type   = type;
+  memset(&gl_comm_ctx, 0, sizeof(gl_comm_ctx));
+  gl_comm_ctx.type = type;
   gl_comm_ctx.driver = driver;
+  strncpy(gl_comm_ctx.device, device, sizeof(gl_comm_ctx.device) - 1);
+  gl_comm_ctx.baud = baud;
+
+
   // ready to call the driver-specific init function
   if (driver->init(&gl_comm_ctx) < 0) {
-    LOG(ERR, "error calling underlying init function\n");
+    LOG(ERR, "error calling underlying init function");
     return NULL;
   }
   return &gl_comm_ctx;
