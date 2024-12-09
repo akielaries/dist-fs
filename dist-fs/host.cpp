@@ -25,7 +25,8 @@ int main() {
     return -1;
   }
 
-  uint8_t buffer[256]; // Adjust size as needed
+  // read the deadbeef!!
+  uint8_t buffer[4]; // Adjust size as needed
   const uint16_t buffer_size = sizeof(buffer) / sizeof(buffer[0]);
   const uint16_t timeout_ms  = 1000; // 1-second timeout for reading
   ssize_t bytes_received     = 0;
