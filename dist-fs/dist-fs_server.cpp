@@ -38,7 +38,7 @@ int main() {
                           current_time - start_time)
                           .count();
     if (elapsed_time >= 10) {
-      LOG(INFO, "Timeout reached after 10 seconds\n");
+      LOG(INFO, "Timeout reached after 10 seconds");
       break; // Exit the loop
     }
   }

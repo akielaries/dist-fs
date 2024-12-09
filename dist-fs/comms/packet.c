@@ -129,10 +129,12 @@ int decode_packet(comm_context_t *comm_ctx) {
     }
 
     // get command
-    dist_fs_ops_e command = static_cast<dist_fs_ops_e>(buffer[DIST_FS_PKT_COMMAND]);
+    dist_fs_ops_e command =
+      static_cast<dist_fs_ops_e>(buffer[DIST_FS_PKT_COMMAND]);
 
     // get payload size
-    uint32_t payload_size = (buffer[DIST_FS_PKT_SIZE_MSB] << 8) | buffer[DIST_FS_PKT_SIZE_LSB];
+    uint32_t payload_size =
+      (buffer[DIST_FS_PKT_SIZE_MSB] << 8) | buffer[DIST_FS_PKT_SIZE_LSB];
 
     // validate payload size
     if (buffer_size != DIST_FS_HEADER_SIZE + payload_size) {
@@ -144,7 +146,10 @@ int decode_packet(comm_context_t *comm_ctx) {
     }
 
     // print header information
-    LOG(INFO, "Start Bytes: 0x%X 0x%X", buffer[DIST_FS_PKT_START_1], buffer[DIST_FS_PKT_START_2]);
+    LOG(INFO,
+        "Start Bytes: 0x%X 0x%X",
+        buffer[DIST_FS_PKT_START_1],
+        buffer[DIST_FS_PKT_START_2]);
     LOG(INFO, "Command: %d", command);
     LOG(INFO, "Payload Size: %u bytes", payload_size);
 

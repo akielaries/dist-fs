@@ -51,7 +51,7 @@ typedef struct comm_driver_t {
    */
   int (*read)(comm_context_t *ctx,
               uint8_t *rx,
-              uint16_t rx_sz,
+              uint32_t rx_sz,
               uint16_t timeout_ms);
   /**
    * @brief read a buffer of random bytes from the stream
@@ -75,7 +75,7 @@ typedef struct comm_driver_t {
    */
   int (*write)(comm_context_t *ctx,
                uint8_t *tx,
-               uint16_t tx_sz,
+               uint32_t tx_sz,
                uint16_t timeout_ms);
   /**
    * @brief some comms specific ioctl operation
