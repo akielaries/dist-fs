@@ -34,8 +34,8 @@ int main() {
   int rc = list_files_command(comm_ctx);
   LOG(INFO, "list_files_command() rc: %d", rc);
   
-  //rc = upload_files_command(comm_ctx, "../test_files/wavs/PinkPanther60.wav");
-  //LOG(INFO, "upload_files_command() rc: %d", rc);
+  rc = upload_files_command(comm_ctx, "../test_files/wavs/PinkPanther60.wav");
+  LOG(INFO, "upload_files_command() rc: %d", rc);
 
 
   return 0;
