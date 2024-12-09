@@ -33,7 +33,7 @@ typedef enum {
   DIST_FS_PKT_SIZE_MSB = 3, // Payload size MSB
   DIST_FS_PKT_SIZE_LSB = 4, // Payload size LSB
   DIST_FS_PKT_PAYLOAD  = 5, // Offset for the payload data
-  DIST_FS_PKT_CHECKSUM = 5, // Offset for the checksum byte
+  DIST_FS_PKT_CHECKSUM = 6, // Offset for the checksum byte
 } dist_fs_offsets_e;
 
 /* @brief dist-fs packet structure */
