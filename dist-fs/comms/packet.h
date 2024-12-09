@@ -48,7 +48,7 @@ typedef struct {
 
 /* command functions */
 int list_files_command(comm_context_t *comm_ctx);
-
+int upload_files_command(comm_context_t *comm_ctx, const char *filename);
 /* packet functions */
 int test_packet(comm_context_t *comm_ctx,
                 uint8_t *payload,

@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "packet.h"
 #include "comms.h"
@@ -27,6 +29,8 @@ int test_packet(comm_context_t *comm_ctx,
   return rc;
 }
 
+/* packetize operation commands */
+
 int list_files_command(comm_context_t *comm_ctx) {
   // no payload, just send the header
   uint8_t buffer[DIST_FS_HEADER_SIZE];
@@ -47,6 +51,44 @@ int list_files_command(comm_context_t *comm_ctx) {
     LOG(ERR, "Failed to send LIST command: %d", ret);
   }
   return ret;
+}
+
+int upload_files_command(comm_context_t *comm_ctx, const char *filename) {
+  LOG(INFO, "Uploading file {%s}", filename);
+  int fd = open(filename, O_RDONLY);
+  if (fd == -1) {
+    LOG(ERR, "Error opening file {%s}", filename);
+    return fd;
+  }
+  uint32_t payload_size = lseek(fd, 0, SEEK_END);
+  if (payload_size == -1) {
+    LOG(ERR, "Error seeking to end of file");
+    return -1;
+  } else {
+    LOG(INFO, "Payload size {%d}", payload_size);
+  }
+
+  // allocate a buffer based on the size of the filename. this will be the payload
+  size_t packet_size = DIST_FS_HEADER_SIZE + payload_size;
+  uint8_t *packet_buffer = (uint8_t *)malloc(packet_size);
+  if (!packet_buffer) {
+    LOG(ERR, "Memory allocation failed for packet buffer");
+    close(fd);
+    return -1;
+  } else {
+    LOG(INFO, "Allocated {%zu} bytes for packet buffer", packet_size);
+  }
+
+  int ret = encode_packet(DIST_FS_UPLOAD, packet_buffer + DIST_FS_HEADER_SIZE, payload_size, packet_buffer);
+  if (ret < 0) {
+    LOG(ERR, "Failed to form packet\n");
+    return ret;
+  }
+
+
+
+  close(fd);
+  return 0;
 }
 
 int encode_packet(dist_fs_ops_e command,
