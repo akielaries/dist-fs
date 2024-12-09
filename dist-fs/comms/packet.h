@@ -55,7 +55,7 @@ int encode_packet(dist_fs_ops_e command,
                 uint8_t *payload,
                 uint16_t payload_size,
                 uint8_t *buffer);
-int decode_packet(dist_fs_packet_t *packet);
+int decode_packet(comm_context_t *comm_ctx);
 
 
 

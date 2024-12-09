@@ -120,46 +120,72 @@ int encode_packet(dist_fs_ops_e command,
   return rc;
 }
 
-int decode_packet(uint8_t *buffer, size_t buffer_size) {
-  // check start bytes
-  if (buffer[DIST_FS_PKT_START_1] != DIST_FS_START_BYTE_A ||
-      buffer[DIST_FS_PKT_START_2] != DIST_FS_START_BYTE_B) {
-    LOG(ERR, "Invalid start bytes\n");
-    return -1;
-  }
+int decode_packet(comm_context_t *comm_ctx) {
+    uint8_t buffer[256];  // Adjust buffer size as needed
+    const uint16_t buffer_size = sizeof(buffer);
+    const uint16_t timeout_ms = 1000; // 1-second timeout
 
-  // get command code
-  dist_fs_ops_e command = static_cast<dist_fs_ops_e>(buffer[DIST_FS_PKT_COMMAND]);
+    // Read header first
+    int ret = comm_ctx->driver->read(comm_ctx, buffer, DIST_FS_HEADER_SIZE, timeout_ms);
+    if (ret == 0) {
+      LOG(INFO, "Read :");
+      for (int i = 0; i < DIST_FS_HEADER_SIZE; i++) {
+        printf("0x%X ", buffer[i]);
+      }
+      if (buffer[DIST_FS_PKT_START_1] != DIST_FS_START_BYTE_A ||
+        buffer[DIST_FS_PKT_START_2] != DIST_FS_START_BYTE_B) {
+        LOG(ERR, "Invalid start bytes\n");
+        return -1;
+      }
 
-  // get payload size
-  uint16_t payload_size = (buffer[DIST_FS_PKT_SIZE_MSB] << 8) 
-                          | buffer[DIST_FS_PKT_SIZE_LSB];
+        // Get command
+        dist_fs_ops_e command = static_cast<dist_fs_ops_e>(buffer[DIST_FS_PKT_COMMAND]);
 
-  // validate payload size
-  if (buffer_size != DIST_FS_HEADER_SIZE + payload_size) {
-    LOG(ERR, "Payload size mismatch: expected %u but got %zu\n", 
-        payload_size, buffer_size - DIST_FS_HEADER_SIZE);
-    return -1;
-  }
+        // Get payload size
+        uint16_t payload_size = (buffer[DIST_FS_PKT_SIZE_MSB] << 8) | buffer[DIST_FS_PKT_SIZE_LSB];
 
-  LOG(INFO, "Decoded packet - Command: %d, Payload Size: %u bytes", command, payload_size);
+        // Validate payload size
+        if (buffer_size != DIST_FS_HEADER_SIZE + payload_size) {
+            LOG(ERR, "Payload size mismatch: expected %u but got %zu\n", payload_size, buffer_size - DIST_FS_HEADER_SIZE);
+            return -1;
+        }
 
-  uint8_t *payload = nullptr;
-  if (payload_size > 0) {
-    payload = (uint8_t *)malloc(payload_size);
-    if (!payload) {
-      LOG(ERR, "Memory allocation failed for payload\n");
-      return -1;
+        // Print header information
+        printf("Start Bytes: 0x%X 0x%X\n", buffer[DIST_FS_PKT_START_1], buffer[DIST_FS_PKT_START_2]);
+        printf("Command: %d\n", command);
+        printf("Payload Size: %u bytes\n", payload_size);
+
+        // Allocate memory for payload if needed
+        uint8_t *payload = nullptr;
+        if (payload_size > 0) {
+            payload = (uint8_t *)malloc(payload_size);
+            if (!payload) {
+                LOG(ERR, "Memory allocation failed for payload\n");
+                return -1;
+            }
+
+            // Read payload data
+            ret = comm_ctx->driver->read(comm_ctx, payload, payload_size, timeout_ms);
+            if (ret == 0) {
+                // Handle payload if needed (printing here for example)
+                for (size_t i = 0; i < payload_size; i++) {
+                    printf("Payload Byte %zu: 0x%X\n", i, payload[i]);
+                }
+            } else {
+                LOG(ERR, "Error reading payload data: %d", ret);
+            }
+
+            // Free memory after usage
+            free(payload);
+        }
+
+        return 0;
+    } else if (ret == -ETIMEDOUT) {
+        LOG(WARN, "Read timed out. No data received");
+    } else {
+        //LOG(ERR, "Error while reading data: %d", ret);
     }
-    memcpy(payload, buffer + DIST_FS_PKT_PAYLOAD, payload_size);
-      
-    // handle payload if needed (printing here for example)
-    for (size_t i = 0; i < payload_size; i++) {
-      printf("Payload Byte %zu: 0x%X\n", i, payload[i]);
-    } 
-    free(payload);
-  }
 
-  return 0;
+    return -1;
 }
 
