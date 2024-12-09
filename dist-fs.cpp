@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   size_t reset_size                           = 0;
 
   // set a default name for config
-  const char *config_file     = "../dist-fs.conf";
+  const char *config_file     = "../dist-fs_client.conf";
   config_context_t config_ctx = {};
 
   // parse config file

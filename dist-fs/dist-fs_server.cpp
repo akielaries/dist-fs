@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <chrono>
 
 #include "utils.hpp"
 #include "comms/comms.h"
@@ -26,9 +27,22 @@ int main() {
   }
 
 
+  // start the timer
+  auto start_time = std::chrono::steady_clock::now();
+
   while (true) {
     decode_packet(comm_ctx);
+
+    auto current_time = std::chrono::steady_clock::now();
+    auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(
+                          current_time - start_time)
+                          .count();
+    if (elapsed_time >= 10) {
+      LOG(INFO, "Timeout reached after 10 seconds\n");
+      break; // Exit the loop
+    }
   }
+
 
   return 0;
 }

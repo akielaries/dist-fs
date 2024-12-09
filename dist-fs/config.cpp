@@ -68,9 +68,9 @@ int parse_config(const char *filename, config_context_t *config_ctx) {
     // match keys and populate struct
     if (strcmp(key, "Storage") == 0) {
       config_ctx->drive_full_path = strdup(value);
-    } else if (strcmp(key, "Host") == 0) {
+    } else if (strcmp(key, "NetworkHost") == 0) {
       config_ctx->host = strdup(value);
-    } else if (strcmp(key, "Port") == 0) {
+    } else if (strcmp(key, "NetworkPort") == 0) {
       config_ctx->port = atoi(value);
     } else if (strcmp(key, "EnableBackup") == 0) {
       config_ctx->enable_backup = (strcmp(value, "true") == 0);

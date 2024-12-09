@@ -1,9 +1,12 @@
 #pragma once
 
+#include "comms/comms.h"
+
 typedef struct {
   char *drive_full_path; // Path to drive, e.g., /dev/disk/by-id/usb-*
   char *host;            // Host address
   // TODO: add comm type as a field here
+
   int port;               // Port number
   int enable_backup;      // Backup enabled (1 = true, 0 = false)
   char *backup_schedule;  // Backup schedule, e.g., "daily"
