@@ -25,7 +25,7 @@ int main() {
     return -1;
   }
 
-  uint8_t buffer[4]; // Adjust size as needed
+  uint8_t buffer[256]; // Adjust size as needed
   const uint16_t buffer_size = sizeof(buffer) / sizeof(buffer[0]);
   const uint16_t timeout_ms  = 1000; // 1-second timeout for reading
   ssize_t bytes_received     = 0;
@@ -36,8 +36,9 @@ int main() {
     if (ret == 0) { // Successful read
       LOG(INFO, "Got %d bytes", buffer_size);
       for (int i = 0; i < buffer_size; i++) {
-        printf("0x%X\n", buffer[i]);
+        printf("0x%X ", buffer[i]);
       }
+      printf("\n");
 
     } else if (ret == -1) {
       continue;
