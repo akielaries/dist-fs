@@ -68,7 +68,7 @@ int encode_packet(dist_fs_ops_e command,
 
   LOG(INFO, "Formed packet header: ");
   for (int i = 0; i < DIST_FS_HEADER_SIZE; i++) {
-    printf("  0x%X ", buffer[i]);
+    printf("0x%X ", buffer[i]);
   }
   printf("\n");
 
