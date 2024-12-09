@@ -16,6 +16,7 @@ int test_packet(comm_context_t *comm_ctx,
   const uint16_t timeout_ms = 1000; // 1-second timeout for reading
 
   // write data from UART
+  LOG(INFO, "Writing packet");
   rc = comm_ctx->driver->write(comm_ctx, payload, payload_size, timeout_ms);
   if (rc == 0) {
     LOG(INFO, "Data sent");
@@ -42,7 +43,8 @@ int list_files_command(comm_context_t *comm_ctx) {
     return ret;
   }
 
-  // send packet over
+  // send packet
+  LOG(INFO, "Writing packet");
   ret = comm_ctx->driver->write(comm_ctx, buffer, buffer_size, timeout_ms);
   if (ret == 0) {
     LOG(INFO, "LIST command sent");
@@ -54,6 +56,7 @@ int list_files_command(comm_context_t *comm_ctx) {
 
 int upload_files_command(comm_context_t *comm_ctx, const char *filename) {
   LOG(INFO, "Uploading file {%s}", filename);
+  const uint16_t timeout_ms  = 1000; // 1-second timeout
   int fd = open(filename, O_RDONLY);
   if (fd == -1) {
     LOG(ERR, "Error opening file {%s}", filename);
@@ -78,15 +81,34 @@ int upload_files_command(comm_context_t *comm_ctx, const char *filename) {
     LOG(INFO, "Allocated {%zu} bytes for packet buffer", packet_size);
   }
 
+  // read the file directly into the payload portion of the packet buffer
+  lseek(fd, 0, SEEK_SET); // reset file pointer to the beginning
+  ssize_t bytes_read = read(fd, packet_buffer + DIST_FS_HEADER_SIZE, payload_size);
+  if (bytes_read != payload_size) {
+    LOG(ERR, "Error reading file, read {%ld} bytes", bytes_read);
+    free(packet_buffer);
+    close(fd);
+    return -1;
+  }
+
   int ret = encode_packet(DIST_FS_UPLOAD, packet_buffer + DIST_FS_HEADER_SIZE, payload_size, packet_buffer);
   if (ret < 0) {
     LOG(ERR, "Failed to form packet\n");
     return ret;
   }
 
+  // send packet
+  LOG(INFO, "Writing packet");
+  ret = comm_ctx->driver->write(comm_ctx, packet_buffer, packet_size, timeout_ms);
+  if (ret == 0) {
+    LOG(INFO, "UPLOAD command sent");
+  } else {
+    LOG(ERR, "Failed to send UPLOAD command: %d", ret);
+  }
 
-
+  free(packet_buffer);
   close(fd);
+
   return 0;
 }
 
@@ -97,31 +119,10 @@ int encode_packet(dist_fs_ops_e command,
   LOG(INFO,
       "Forming packet for command {%d} with size {%d}",
       command,
-      payload_size);
+      payload_size + DIST_FS_HEADER_SIZE);
   int rc = 0;
 
-  // form the header of the packet
-  buffer[DIST_FS_PKT_START_1] = DIST_FS_START_BYTE_A;
-  buffer[DIST_FS_PKT_START_2] = DIST_FS_START_BYTE_B;
-  // set command of the packet
-  buffer[DIST_FS_PKT_COMMAND] = command;
-  // set payload size
-  buffer[DIST_FS_PKT_SIZE_MSB] = (payload_size >> 8) & 0xFF;
-  buffer[DIST_FS_PKT_SIZE_LSB] = payload_size & 0xFF;
-
-  LOG(INFO, "Formed packet header: ");
-  for (int i = 0; i < DIST_FS_HEADER_SIZE; i++) {
-    printf("0x%X ", buffer[i]);
-  }
-  printf("\n");
-
-  // fill in payload data
-  if (payload && payload_size > 0) {
-    memcpy(buffer + DIST_FS_PKT_PAYLOAD, payload, payload_size);
-  }
-
   switch (command) {
-
     case DIST_FS_LIST:
       LOG(INFO, "Forming packet for DIST_FS_LIST");
       break;
@@ -141,6 +142,28 @@ int encode_packet(dist_fs_ops_e command,
     default:
       LOG(ERR, "Unknown command {%d}", command);
       break;
+  }
+
+  // form the header of the packet
+  buffer[DIST_FS_PKT_START_1] = DIST_FS_START_BYTE_A;
+  buffer[DIST_FS_PKT_START_2] = DIST_FS_START_BYTE_B;
+  // set command of the packet
+  buffer[DIST_FS_PKT_COMMAND] = command;
+  // set payload size
+  buffer[DIST_FS_PKT_SIZE_MSB] = (payload_size >> 8) & 0xFF;
+  buffer[DIST_FS_PKT_SIZE_LSB] = payload_size & 0xFF;
+
+  LOG(INFO, "Formed packet header: 0x%X 0x%X 0x%X 0x%X 0x%X",
+            buffer[DIST_FS_PKT_START_1],
+            buffer[DIST_FS_PKT_START_2],
+            buffer[DIST_FS_PKT_COMMAND],
+            buffer[DIST_FS_PKT_SIZE_MSB],
+            buffer[DIST_FS_PKT_SIZE_LSB]);
+
+  // fill in payload data
+  if (payload && payload_size > 0) {
+    memcpy(buffer + DIST_FS_PKT_PAYLOAD, payload, payload_size);
+    LOG(INFO, "memcpy complete");
   }
 
   return rc;
