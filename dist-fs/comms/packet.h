@@ -55,6 +55,6 @@ int test_packet(comm_context_t *comm_ctx,
                 uint16_t payload_size);
 int encode_packet(dist_fs_ops_e command,
                   uint8_t *payload,
-                  uint16_t payload_size,
+                  uint32_t payload_size,
                   uint8_t *buffer);
 int decode_packet(comm_context_t *comm_ctx);

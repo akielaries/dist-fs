@@ -14,7 +14,6 @@ int test_packet(comm_context_t *comm_ctx,
   int rc = 0;
 
   const uint16_t timeout_ms = 1000; // 1-second timeout for reading
-  ssize_t bytes_received    = 0;
 
   // write data from UART
   rc = comm_ctx->driver->write(comm_ctx, payload, payload_size, timeout_ms);
@@ -93,14 +92,13 @@ int upload_files_command(comm_context_t *comm_ctx, const char *filename) {
 
 int encode_packet(dist_fs_ops_e command,
                   uint8_t *payload,
-                  uint16_t payload_size,
+                  uint32_t payload_size,
                   uint8_t *buffer) {
   LOG(INFO,
       "Forming packet for command {%d} with size {%d}",
       command,
       payload_size);
   int rc = 0;
-  dist_fs_packet_t packet;
 
   // form the header of the packet
   buffer[DIST_FS_PKT_START_1] = DIST_FS_START_BYTE_A;
