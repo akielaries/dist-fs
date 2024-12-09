@@ -70,6 +70,7 @@ int encode_packet(dist_fs_ops_e command,
   for (int i = 0; i < DIST_FS_HEADER_SIZE; i++) {
     printf("  0x%X ", buffer[i]);
   }
+  printf("\n");
 
   // fill in payload data
   if (payload && payload_size > 0) {
