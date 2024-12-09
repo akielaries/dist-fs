@@ -14,7 +14,7 @@
 
 
 int main() {
-  comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/serial0", 115200);
+  comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/serial0", 1000000);
   if (!comm_ctx) {
     LOG(ERR, "Failed to initialize UART communication\n");
     return -1;
@@ -34,8 +34,8 @@ int main() {
   int rc = list_files_command(comm_ctx);
   LOG(INFO, "list_files_command() rc: %d", rc);
   
-  rc = upload_files_command(comm_ctx, "../test_files/wavs/PinkPanther60.wav");
-  LOG(INFO, "upload_files_command() rc: %d", rc);
+  //rc = upload_files_command(comm_ctx, "../test_files/wavs/PinkPanther60.wav");
+  //LOG(INFO, "upload_files_command() rc: %d", rc);
 
 
   return 0;
