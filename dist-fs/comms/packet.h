@@ -6,13 +6,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "comms.h"
 
-#define DIST_FS_START_BYTES 0xDAFF
+#define DIST_FS_START_BYTE_A 0xDA
+#define DIST_FS_START_BYTE_B 0xFF
 
 
 typedef enum {
-  DIST_FS_START_BYTE_SIZE = 2,   // Start bytes are 2 bytes
-  DIST_FS_HEADER_SIZE = 5,       // Header: start bytes (2), command (1), size (2)
+  DIST_FS_START_BYTE_SIZE = 2,   // start bytes are 2 bytes
+  DIST_FS_HEADER_SIZE = 5,       // start bytes (2), command (1), payload size (2)
 } dist_fs_sizes_e;
 
 /* @brief enumeration of dist-fs operations */
@@ -38,9 +40,22 @@ typedef enum {
 typedef struct {
   uint8_t start[DIST_FS_START_BYTE_SIZE]; // Start bytes (fixed at 0 and 1)
   dist_fs_ops_e command; // Command (e.g., DIST_FS_LIST, DIST_FS_UPLOAD)
-  uint16_t payload_size; // Size of the payload data
+  uint32_t payload_size; // Size of the payload data
   uint8_t *payload;      // Pointer to the payload data
   uint8_t checksum;      // Checksum byte for error detection
 } dist_fs_packet_t;
 
-int form_packet(dist_fs_ops_e command, uint8_t *payload, uint16_t payload_size);
+
+/* command functions */
+int list_files_command(comm_context_t *comm_ctx);
+
+/* packet functions */
+int test_packet(comm_context_t *comm_ctx, uint8_t *payload, uint16_t payload_size);
+int encode_packet(dist_fs_ops_e command,
+                uint8_t *payload,
+                uint16_t payload_size,
+                uint8_t *buffer);
+int decode_packet(dist_fs_packet_t *packet);
+
+
+
