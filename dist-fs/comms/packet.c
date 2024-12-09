@@ -180,6 +180,5 @@ int decode_packet(comm_context_t *comm_ctx) {
   } else {
     LOG(ERR, "Error while reading data: %d", ret);
   }
-
   return -1;
 }
