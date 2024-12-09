@@ -63,6 +63,15 @@ static int configure_uart(int fd, uint32_t baud) {
     case 115200:
       baud_rate = B115200;
       break;
+    case 1000000:
+      baud_rate = B1000000;
+      break;
+    case 2000000:
+      baud_rate = B2000000;
+      break;
+    case 4000000:
+      baud_rate = B4000000;
+      break;
     default:
       LOG(ERR, "Unsupported baud rate: %u\n", baud);
       return -1;
