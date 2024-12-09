@@ -128,32 +128,34 @@ int decode_packet(comm_context_t *comm_ctx) {
     // Read header first
     int ret = comm_ctx->driver->read(comm_ctx, buffer, DIST_FS_HEADER_SIZE, timeout_ms);
     if (ret == 0) {
-      LOG(INFO, "Read :");
-      for (int i = 0; i < DIST_FS_HEADER_SIZE; i++) {
-        printf("0x%X ", buffer[i]);
-      }
-      if (buffer[DIST_FS_PKT_START_1] != DIST_FS_START_BYTE_A ||
-        buffer[DIST_FS_PKT_START_2] != DIST_FS_START_BYTE_B) {
-        LOG(ERR, "Invalid start bytes\n");
-        return -1;
-      }
+        LOG(INFO, "Read :");
+        for (int i = 0; i < DIST_FS_HEADER_SIZE; i++) {
+            printf("0x%X ", buffer[i]);
+        }
+        printf("\n");
+
+        // Validate start bytes
+        if (buffer[0] != DIST_FS_START_BYTE_A || buffer[1] != DIST_FS_START_BYTE_B) {
+            LOG(ERR, "Invalid start bytes");
+            return -1;
+        }
 
         // Get command
-        dist_fs_ops_e command = static_cast<dist_fs_ops_e>(buffer[DIST_FS_PKT_COMMAND]);
+        dist_fs_ops_e command = static_cast<dist_fs_ops_e>(buffer[2]);
 
         // Get payload size
-        uint16_t payload_size = (buffer[DIST_FS_PKT_SIZE_MSB] << 8) | buffer[DIST_FS_PKT_SIZE_LSB];
+        uint16_t payload_size = (buffer[3] << 8) | buffer[4];
 
         // Validate payload size
         if (buffer_size != DIST_FS_HEADER_SIZE + payload_size) {
-            LOG(ERR, "Payload size mismatch: expected %u but got %zu\n", payload_size, buffer_size - DIST_FS_HEADER_SIZE);
+            LOG(ERR, "Payload size mismatch: expected %u but got %zu", payload_size, buffer_size - DIST_FS_HEADER_SIZE);
             return -1;
         }
 
         // Print header information
-        printf("Start Bytes: 0x%X 0x%X\n", buffer[DIST_FS_PKT_START_1], buffer[DIST_FS_PKT_START_2]);
-        printf("Command: %d\n", command);
-        printf("Payload Size: %u bytes\n", payload_size);
+        LOG(INFO, "Start Bytes: 0x%X 0x%X", buffer[0], buffer[1]);
+        LOG(INFO, "Command: %d\n", command);
+        LOG(INFO, "Payload Size: %u bytes\n", payload_size);
 
         // Allocate memory for payload if needed
         uint8_t *payload = nullptr;
@@ -171,7 +173,9 @@ int decode_packet(comm_context_t *comm_ctx) {
                 for (size_t i = 0; i < payload_size; i++) {
                     printf("Payload Byte %zu: 0x%X\n", i, payload[i]);
                 }
-            } else {
+            } else if (ret == -1) {
+            }
+            else {
                 LOG(ERR, "Error reading payload data: %d", ret);
             }
 
@@ -182,8 +186,9 @@ int decode_packet(comm_context_t *comm_ctx) {
         return 0;
     } else if (ret == -ETIMEDOUT) {
         LOG(WARN, "Read timed out. No data received");
+    } else if (ret == -1) {
     } else {
-        //LOG(ERR, "Error while reading data: %d", ret);
+        LOG(ERR, "Error while reading data: %d", ret);
     }
 
     return -1;

@@ -30,4 +30,5 @@ int main() {
     decode_packet(comm_ctx);
   }
 
+  return 0;
 }
