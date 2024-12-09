@@ -13,8 +13,8 @@
 
 
 typedef enum {
-  DIST_FS_START_BYTE_SIZE = 2,   // start bytes are 2 bytes
-  DIST_FS_HEADER_SIZE = 5,       // start bytes (2), command (1), payload size (2)
+  DIST_FS_START_BYTE_SIZE = 2, // start bytes are 2 bytes
+  DIST_FS_HEADER_SIZE     = 5, // start bytes (2), command (1), payload size (2)
 } dist_fs_sizes_e;
 
 /* @brief enumeration of dist-fs operations */
@@ -50,12 +50,11 @@ typedef struct {
 int list_files_command(comm_context_t *comm_ctx);
 
 /* packet functions */
-int test_packet(comm_context_t *comm_ctx, uint8_t *payload, uint16_t payload_size);
-int encode_packet(dist_fs_ops_e command,
+int test_packet(comm_context_t *comm_ctx,
                 uint8_t *payload,
-                uint16_t payload_size,
-                uint8_t *buffer);
+                uint16_t payload_size);
+int encode_packet(dist_fs_ops_e command,
+                  uint8_t *payload,
+                  uint16_t payload_size,
+                  uint8_t *buffer);
 int decode_packet(comm_context_t *comm_ctx);
-
-
-

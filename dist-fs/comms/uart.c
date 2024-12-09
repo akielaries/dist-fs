@@ -18,8 +18,7 @@ static int uart_read(comm_context_t *ctx,
                      uint8_t *rx,
                      uint16_t rx_sz,
                      uint16_t timeout_ms);
-static int
-uart_write_one(comm_context_t *ctx, uint8_t tx, uint16_t timeout_ms);
+static int uart_write_one(comm_context_t *ctx, uint8_t tx, uint16_t timeout_ms);
 static int uart_write(comm_context_t *ctx,
                       uint8_t *tx,
                       uint16_t tx_size,

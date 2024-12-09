@@ -10,7 +10,7 @@
 
 
 #define UART_DEVICE "/dev/serial0"
-#define BAUD_RATE B115200
+#define BAUD_RATE   B115200
 
 
 int main() {
@@ -24,12 +24,12 @@ int main() {
     return -1;
   }
 
-/*
-  // send a test packet first
-  uint8_t buffer[4] = {0xDE, 0xAD, 0xBE, 0xEF};
-  const uint16_t buffer_size = sizeof(buffer) / sizeof(buffer[0]);
-  test_packet(comm_ctx, buffer, buffer_size);
-*/
+  /*
+    // send a test packet first
+    uint8_t buffer[4] = {0xDE, 0xAD, 0xBE, 0xEF};
+    const uint16_t buffer_size = sizeof(buffer) / sizeof(buffer[0]);
+    test_packet(comm_ctx, buffer, buffer_size);
+  */
 
   int rc = list_files_command(comm_ctx);
 
