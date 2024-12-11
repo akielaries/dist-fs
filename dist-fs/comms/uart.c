@@ -36,8 +36,7 @@ comm_driver_t uart_ops = {
 
 static int uart_fd;
 
-// TODO : most of this implementation will need to be solidified. looks like
-// the context for this needs to be fleshed out
+
 static int configure_uart(int fd, uint32_t baud) {
   struct termios tty;
   if (tcgetattr(fd, &tty) != 0) {
