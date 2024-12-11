@@ -196,35 +196,57 @@ static int uart_write(comm_context_t *ctx,
                       uint8_t *tx,
                       uint32_t tx_size,
                       uint16_t timeout_ms) {
-  if (!ctx || !ctx->driver || !tx)
-    return -EINVAL;
+    if (!ctx || !ctx->driver || !tx)
+        return -EINVAL;
 
-  struct pollfd pfd     = {.fd = uart_fd, .events = POLLOUT, .revents = 0};
-  ssize_t bytes_written = 0;
+    struct pollfd pfd     = {.fd = uart_fd, .events = POLLOUT, .revents = 0};
+    ssize_t bytes_written = 0;
 
-  while (bytes_written < tx_size) {
-    int ret = poll(&pfd, 1, timeout_ms);
-    if (ret > 0 && (pfd.revents & POLLOUT)) {
-      ssize_t w = write(uart_fd,
-                        ((uint8_t *)tx) + bytes_written,
-                        tx_size - bytes_written);
-      if (w > 0) {
-        bytes_written += w;
-      } else {
-        return -errno;
-      }
-    } else if (ret == 0) {
-      break; // Timeout
-    } else {
-      return -errno;
+    struct timespec start_time, end_time;
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+
+    while (bytes_written < tx_size) {
+        int ret = poll(&pfd, 1, timeout_ms);
+        if (ret > 0 && (pfd.revents & POLLOUT)) {
+            ssize_t w = write(uart_fd,
+                              ((uint8_t *)tx) + bytes_written,
+                              tx_size - bytes_written);
+            if (w > 0) {
+                bytes_written += w;
+            } else {
+                return -errno;
+            }
+        } else if (ret == 0) {
+            break; // Timeout
+        } else {
+            return -errno;
+        }
     }
-  }
 
-  if (bytes_written > 0) {
-    return 0;
-  } else {
-    return -1;
-  }
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+
+    if (bytes_written > 0) {
+        double elapsed_time = (end_time.tv_sec - start_time.tv_sec) +
+                              (end_time.tv_nsec - start_time.tv_nsec) / 1e9;
+
+        double bytes_per_sec = bytes_written / elapsed_time;
+        double kb_per_sec = bytes_per_sec / 1024;
+        double mb_per_sec = kb_per_sec / 1024;
+
+        LOG(INFO, "Took %.8f seconds to send %ld bytes | %.4f KB | %.4f MB",
+                  elapsed_time, 
+                  bytes_written, 
+                  bytes_written / 1024.0, 
+                  bytes_written / (1024.0 * 1024.0));
+        LOG(INFO, "Speed: %.4f bps | %.4f Kbps | %.4f Mbps",
+                  bytes_per_sec * 8, 
+                  kb_per_sec * 8, 
+                  mb_per_sec * 8);
+
+        return 0;
+    } else {
+        return -1;
+    }
 }
 
 static int uart_ioctl(comm_context_t *ctx, uint8_t opcode, void *data) {
