@@ -9,9 +9,8 @@
 #include "comms/packet.h"
 
 
-
 int main() {
-  //comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/serial0", 4000000);
+  // comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/serial0", 4000000);
   comm_context_t *comm_ctx = comm_init(COMMS_SPI, "/dev/spidev0.0", 1000000);
 
   if (!comm_ctx) {
