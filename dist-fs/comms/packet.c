@@ -56,8 +56,8 @@ int list_files_command(comm_context_t *comm_ctx) {
 
 int upload_files_command(comm_context_t *comm_ctx, const char *filename) {
   LOG(INFO, "Uploading file {%s}", filename);
-  const uint16_t timeout_ms  = 1000; // 1-second timeout
-  int fd = open(filename, O_RDONLY);
+  const uint16_t timeout_ms = 1000; // 1-second timeout
+  int fd                    = open(filename, O_RDONLY);
   if (fd == -1) {
     LOG(ERR, "Error opening file {%s}", filename);
     return fd;
@@ -70,8 +70,9 @@ int upload_files_command(comm_context_t *comm_ctx, const char *filename) {
     LOG(INFO, "Payload size {%d}", payload_size);
   }
 
-  // allocate a buffer based on the size of the filename. this will be the payload
-  size_t packet_size = DIST_FS_HEADER_SIZE + payload_size;
+  // allocate a buffer based on the size of the filename. this will be the
+  // payload
+  size_t packet_size     = DIST_FS_HEADER_SIZE + payload_size;
   uint8_t *packet_buffer = (uint8_t *)malloc(packet_size);
   if (!packet_buffer) {
     LOG(ERR, "Memory allocation failed for packet buffer");
@@ -83,7 +84,8 @@ int upload_files_command(comm_context_t *comm_ctx, const char *filename) {
 
   // read the file directly into the payload portion of the packet buffer
   lseek(fd, 0, SEEK_SET); // reset file pointer to the beginning
-  ssize_t bytes_read = read(fd, packet_buffer + DIST_FS_HEADER_SIZE, payload_size);
+  ssize_t bytes_read =
+    read(fd, packet_buffer + DIST_FS_HEADER_SIZE, payload_size);
   if (bytes_read != payload_size) {
     LOG(ERR, "Error reading file, read {%ld} bytes", bytes_read);
     free(packet_buffer);
@@ -91,7 +93,10 @@ int upload_files_command(comm_context_t *comm_ctx, const char *filename) {
     return -1;
   }
 
-  int ret = encode_packet(DIST_FS_UPLOAD, packet_buffer + DIST_FS_HEADER_SIZE, payload_size, packet_buffer);
+  int ret = encode_packet(DIST_FS_UPLOAD,
+                          packet_buffer + DIST_FS_HEADER_SIZE,
+                          payload_size,
+                          packet_buffer);
   if (ret < 0) {
     LOG(ERR, "Failed to form packet\n");
     return ret;
@@ -99,7 +104,8 @@ int upload_files_command(comm_context_t *comm_ctx, const char *filename) {
 
   // send packet
   LOG(INFO, "Writing packet");
-  ret = comm_ctx->driver->write(comm_ctx, packet_buffer, packet_size, timeout_ms);
+  ret =
+    comm_ctx->driver->write(comm_ctx, packet_buffer, packet_size, timeout_ms);
   if (ret == 0) {
     LOG(INFO, "UPLOAD command sent");
   } else {
@@ -153,12 +159,13 @@ int encode_packet(dist_fs_ops_e command,
   buffer[DIST_FS_PKT_SIZE_MSB] = (payload_size >> 8) & 0xFF;
   buffer[DIST_FS_PKT_SIZE_LSB] = payload_size & 0xFF;
 
-  LOG(INFO, "Formed packet header: 0x%X 0x%X 0x%X 0x%X 0x%X",
-            buffer[DIST_FS_PKT_START_1],
-            buffer[DIST_FS_PKT_START_2],
-            buffer[DIST_FS_PKT_COMMAND],
-            buffer[DIST_FS_PKT_SIZE_MSB],
-            buffer[DIST_FS_PKT_SIZE_LSB]);
+  LOG(INFO,
+      "Formed packet header: 0x%X 0x%X 0x%X 0x%X 0x%X",
+      buffer[DIST_FS_PKT_START_1],
+      buffer[DIST_FS_PKT_START_2],
+      buffer[DIST_FS_PKT_COMMAND],
+      buffer[DIST_FS_PKT_SIZE_MSB],
+      buffer[DIST_FS_PKT_SIZE_LSB]);
 
   // fill in payload data
   if (payload && payload_size > 0) {
