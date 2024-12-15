@@ -391,17 +391,6 @@ int download_file(const char *filename) {
 
   LOG(INFO, "File '%s' downloaded successfully.", basename);
 
-
-
-  // read metadata table
-
-  // search for filename in metadata table
-
-  // if there is a match
-
-  // start at the offset of that file, and start writing it to a local binary
-  // file
-
   return 0;
 }
 
