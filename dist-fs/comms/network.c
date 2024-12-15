@@ -28,12 +28,13 @@ static int network_write(comm_context_t *ctx,
 static int network_ioctl(comm_context_t *ctx, uint8_t opcode, void *data);
 
 comm_driver_t network_ops = {
+  /*
   .init      = network_init,
   .read_one  = NULL,
   .read      = network_read,
   .write_one = NULL,
   .write     = network_write,
   .ioctl     = network_ioctl,
+  */
 };
-
 

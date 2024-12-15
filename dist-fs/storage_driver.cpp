@@ -313,6 +313,86 @@ int upload_file(const char *filename) {
 int download_file(const char *filename) {
   LOG(INFO, "Downloading file: %s", filename);
 
+  int ssd_fd = open(DEVICE_PATH, O_RDONLY);
+  if (ssd_fd < 0) {
+    LOG(ERR, "Failed to open SSD device: %s", DEVICE_PATH);
+    return -1;
+  }
+
+  // read the metadata table
+  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  if (metadata_table.empty()) {
+    LOG(ERR, "Failed to read SSD metadata table.");
+    close(ssd_fd);
+    return -1;
+  }
+
+  // search for the filename in the metadata table
+  auto it = std::find_if(metadata_table.begin(), metadata_table.end(),
+                         [filename](const storage_metadata_t &entry) {
+                           return strcmp(entry.filename, filename) == 0;
+                         });
+
+  if (it == metadata_table.end()) {
+    LOG(ERR, "File '%s' not found on SSD.", filename);
+    close(ssd_fd);
+    return -1;
+  }
+
+  // File found, get the start offset and size
+  off_t start_offset = it->start_offset;
+  size_t file_size = it->size;
+
+  // extract basename from filename
+  const char *basename = strrchr(filename, '/');
+  if (basename) {
+    basename++; // move past the '/'
+  } else {
+    basename = filename; // no directory, use filename directly
+  }
+
+  // create local binary file to write to
+  FILE *local_file = fopen(basename, "wb");
+  if (!local_file) {
+    LOG(ERR, "Failed to create local file: %s", basename);
+    close(ssd_fd);
+    return -1;
+  }
+
+  size_t buffer_size = 4096;
+  std::vector<uint8_t> buffer(buffer_size);
+
+  // Read from SSD and write to local file
+  ssize_t bytes_read = 0;
+  off_t offset = start_offset;
+
+  while (file_size > 0) {
+    ssize_t read_size = pread(ssd_fd, buffer.data(), buffer_size, offset);
+    if (read_size < 0) {
+      LOG(ERR, "Failed to read from SSD at offset %ld", offset);
+      break; // exits the loop but don't exit the function prematurely
+    }
+
+    // no more data to read
+    if (read_size == 0) break;
+
+    if (read_size > file_size) {
+      read_size = file_size; // adjust read size if it exceeds the file size
+    }
+
+    fwrite(buffer.data(), 1, read_size, local_file);
+    file_size -= read_size;
+    offset += read_size;
+  }
+
+  // close the local file and SSD device
+  fclose(local_file);
+  close(ssd_fd);
+
+  LOG(INFO, "File '%s' downloaded successfully.", basename);
+
+
+
   // read metadata table
 
   // search for filename in metadata table

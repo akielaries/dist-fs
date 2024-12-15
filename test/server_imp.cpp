@@ -2,6 +2,7 @@
 #include "socket.h"
 
 #define BUFFER_SIZE 1024
+#define SERVER_IP "192.168.86.56"
 
 int main() {
     int sockfd;

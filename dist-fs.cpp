@@ -107,7 +107,9 @@ int main(int argc, char *argv[]) {
           rc = -1;
           goto cleanup;
         }
-        download_file(optarg);
+        LOG(INFO, "calling download_file");
+        rc = download_file(optarg);
+        LOG(INFO, "rc : %d", rc);
         break;
 
       case 'D': // --delete
