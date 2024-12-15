@@ -10,8 +10,7 @@
 
 
 int main() {
-  // comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/serial0", 4000000);
-  comm_context_t *comm_ctx = comm_init(COMMS_SPI, "/dev/spidev0.0", 1000000);
+   comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/serial0", 4000000);
 
   if (!comm_ctx) {
     LOG(ERR, "Failed to initialize UART communication\n");

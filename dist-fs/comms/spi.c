@@ -36,6 +36,7 @@ comm_driver_t spi_ops = {
 
 static int spi_fd = -1; // SPI file descriptor
 
+
 static int configure_spi(int fd, uint32_t speed_hz) {
   uint8_t mode          = SPI_MODE_0; // SPI mode 0
   uint8_t bits_per_word = 8;          // 8-bit words
