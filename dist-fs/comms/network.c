@@ -44,42 +44,62 @@ static int network_init(comm_context_t *ctx) {
         LOG(ERR, "Invalid context");
         return -1;
     }
-    
+
     if (!ctx || strlen(ctx->device) == 0) {
-      LOG(ERR, "Invalid address: %s", ctx->device);
-      return -1;
+        LOG(ERR, "Invalid address: %s", ctx->device);
+        return -1;
     }
 
     network_context_t *net_ctx = &ctx->network_ctx;
 
-    // stocket creation
+    // Step 1: Create a socket
     net_ctx->socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (net_ctx->socket_fd < 0) {
         LOG(ERR, "Socket creation failed: %s", strerror(errno));
         return -1;
     }
 
-    // configure server address
-    memset(&net_ctx->server_addr, 0, sizeof(net_ctx->server_addr));
-    net_ctx->server_addr.sin_family = AF_INET;
-    net_ctx->server_addr.sin_port = htons(NETWORK_DEFAULT_PORT);
+    // Step 2: Configure the server address
+    struct sockaddr_in server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Bind to all interfaces
+    server_addr.sin_port = htons(NETWORK_DEFAULT_PORT);
 
-    if (inet_pton(AF_INET, ctx->device, &net_ctx->server_addr.sin_addr) <= 0) {
-        LOG(ERR, "Invalid server address: %s", ctx->device);
+    // Step 3: Bind the socket to the address and port
+    if (bind(net_ctx->socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        LOG(ERR, "Socket bind failed: %s", strerror(errno));
         close(net_ctx->socket_fd);
         return -1;
     }
 
-    // connect to server
-    if (connect(net_ctx->socket_fd,
-                (struct sockaddr *)&net_ctx->server_addr,
-                sizeof(net_ctx->server_addr)) < 0) {
-        LOG(ERR, "Connection to server failed: %s", strerror(errno));
+    // Step 4: Start listening for connections
+    if (listen(net_ctx->socket_fd, SOMAXCONN) < 0) {
+        LOG(ERR, "Socket listen failed: %s", strerror(errno));
         close(net_ctx->socket_fd);
         return -1;
     }
 
-    LOG(INFO, "Network initialized and connected to %s:%d", ctx->device, NETWORK_DEFAULT_PORT);
+    LOG(INFO, "Server listening on port %d", NETWORK_DEFAULT_PORT);
+
+    // Step 5: Accept a connection
+    struct sockaddr_in client_addr;
+    socklen_t client_len = sizeof(client_addr);
+    int client_fd = accept(net_ctx->socket_fd, (struct sockaddr *)&client_addr, &client_len);
+    if (client_fd < 0) {
+        LOG(ERR, "Socket accept failed: %s", strerror(errno));
+        close(net_ctx->socket_fd);
+        return -1;
+    }
+
+    // Log the accepted connection
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+    LOG(INFO, "Accepted connection from %s:%d", client_ip, ntohs(client_addr.sin_port));
+
+    // Store client_fd as the active socket for communication
+    net_ctx->socket_fd = client_fd;
+
     return 0;
 }
 
