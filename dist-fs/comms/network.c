@@ -32,124 +32,86 @@ static int network_ioctl(comm_context_t *ctx, uint8_t opcode, void *data);
 
 comm_driver_t network_ops = {
   .init      = network_init,
-  .read_one  = network_read_one,
+  .read_one  = NULL,
   .read      = network_read,
-  .write_one = network_write_one,
+  .write_one = NULL,
   .write     = network_write,
   .ioctl     = network_ioctl,
 };
 
+
+/** @brief Default initialization function for the network interface */
 static int network_init(comm_context_t *ctx) {
     if (!ctx) {
-        LOG(ERR, "Invalid context");
-        return -1;
-    }
-    
-    if (!ctx || strlen(ctx->device) == 0) {
-      LOG(ERR, "Invalid address: %s", ctx->device);
-      return -1;
+        return -EINVAL;
     }
 
-    network_context_t *net_ctx = &ctx->network_ctx;
-
-    // stocket creation
-    net_ctx->socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (net_ctx->socket_fd < 0) {
-        LOG(ERR, "Socket creation failed: %s", strerror(errno));
-        return -1;
+    ctx->network_ctx.socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (ctx->network_ctx.socket_fd < 0) {
+        perror("Socket creation failed");
+        return -errno;
     }
 
-    // configure server address
-    memset(&net_ctx->server_addr, 0, sizeof(net_ctx->server_addr));
-    net_ctx->server_addr.sin_family = AF_INET;
-    net_ctx->server_addr.sin_port = htons(NETWORK_DEFAULT_PORT);
+    ctx->network_ctx.server_addr.sin_family = AF_INET;
+    ctx->network_ctx.server_addr.sin_port = htons(NETWORK_DEFAULT_PORT);
+    ctx->network_ctx.server_addr.sin_addr.s_addr = INADDR_ANY;
 
-    if (inet_pton(AF_INET, ctx->device, &net_ctx->server_addr.sin_addr) <= 0) {
-        LOG(ERR, "Invalid server address: %s", ctx->device);
-        close(net_ctx->socket_fd);
-        return -1;
+    if (connect(ctx->network_ctx.socket_fd, (struct sockaddr *)&ctx->network_ctx.server_addr, sizeof(ctx->network_ctx.server_addr)) < 0) {
+        perror("Connect failed");
+        close(ctx->network_ctx.socket_fd);
+        return -errno;
     }
 
-    // connect to server
-    if (connect(net_ctx->socket_fd,
-                (struct sockaddr *)&net_ctx->server_addr,
-                sizeof(net_ctx->server_addr)) < 0) {
-        LOG(ERR, "Connection to server failed: %s", strerror(errno));
-        close(net_ctx->socket_fd);
-        return -1;
-    }
-
-    LOG(INFO, "Network initialized and connected to %s:%d", ctx->device, NETWORK_DEFAULT_PORT);
     return 0;
 }
 
-static int network_read_one(comm_context_t *ctx, uint16_t timeout_ms) {
-    uint8_t byte;
-    int ret = network_read(ctx, &byte, 1, timeout_ms);
-    return (ret == 1) ? byte : -1;
-}
-
-static int network_read(comm_context_t *ctx,
-                        uint8_t *rx,
-                        uint32_t rx_sz,
-                        uint16_t timeout_ms) {
-    if (!ctx || !rx) {
-        LOG(ERR, "Invalid arguments to network_read");
-        return -1;
+/** @brief Read a buffer of bytes from the network interface */
+static int network_read(comm_context_t *ctx, uint8_t *rx, uint32_t rx_sz, uint16_t timeout_ms) {
+    if (!ctx || !rx || rx_sz == 0) {
+        return -EINVAL;
     }
 
-    network_context_t *net_ctx = &ctx->network_ctx;
-    struct timeval timeout = {
-        .tv_sec  = timeout_ms / 1000,
+    struct timeval tv = {
+        .tv_sec = timeout_ms / 1000,
         .tv_usec = (timeout_ms % 1000) * 1000,
     };
-    fd_set read_fds;
 
-    FD_ZERO(&read_fds);
-    FD_SET(net_ctx->socket_fd, &read_fds);
+    setsockopt(ctx->network_ctx.socket_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    int ret = select(net_ctx->socket_fd + 1, &read_fds, NULL, NULL, &timeout);
-    if (ret <= 0) {
-        return (ret == 0) ? -ETIMEDOUT : -1;
+    ssize_t received = recv(ctx->network_ctx.socket_fd, rx, rx_sz, 0);
+    if (received < 0) {
+        perror("Receive failed");
+        return -errno;
     }
 
-    ssize_t bytes_read = recv(net_ctx->socket_fd, rx, rx_sz, 0);
-    if (bytes_read < 0) {
-        LOG(ERR, "Error reading from network: %s", strerror(errno));
-        return -1;
-    }
-
-    return bytes_read;
+    return received;
 }
 
-static int network_write_one(comm_context_t *ctx, uint8_t tx, uint16_t timeout_ms) {
-    return network_write(ctx, &tx, 1, timeout_ms);
-}
-
-static int network_write(comm_context_t *ctx,
-                         uint8_t *tx,
-                         uint32_t tx_size,
-                         uint16_t timeout_ms) {
-    if (!ctx || !tx) {
-        LOG(ERR, "Invalid arguments to network_write");
-        return -1;
+/** @brief Write a buffer of bytes to the network interface */
+static int network_write(comm_context_t *ctx, uint8_t *tx, uint32_t tx_sz, uint16_t timeout_ms) {
+    if (!ctx || !tx || tx_sz == 0) {
+        return -EINVAL;
     }
 
-    network_context_t *net_ctx = &ctx->network_ctx;
-    ssize_t bytes_sent = send(net_ctx->socket_fd, tx, tx_size, 0);
-    if (bytes_sent < 0) {
-        LOG(ERR, "Error writing to network: %s", strerror(errno));
-        return -1;
+    struct timeval tv = {
+        .tv_sec = timeout_ms / 1000,
+        .tv_usec = (timeout_ms % 1000) * 1000,
+    };
+
+    setsockopt(ctx->network_ctx.socket_fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
+    ssize_t sent = send(ctx->network_ctx.socket_fd, tx, tx_sz, 0);
+    if (sent < 0) {
+        perror("Send failed");
+        return -errno;
     }
 
-    return bytes_sent;
+    return sent;
 }
 
+/** @brief Network-specific IOCTL operation */
 static int network_ioctl(comm_context_t *ctx, uint8_t opcode, void *data) {
-    // Implement specific control operations if required
-    (void)ctx;
-    (void)opcode;
-    (void)data;
-    return -1;
+    // Stub: Add handling of specific operations as needed
+    return -ENOTSUP;
 }
 

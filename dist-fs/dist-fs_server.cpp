@@ -13,6 +13,40 @@
 #include "comms/packet.h"
 
 
+
+#define CLIENT_IP "192.168.86.54"
+#define SERVER_PORT 5000
+#define BUFFER_SIZE 1024
+
+int main() {
+    // Initialize comms as a receiver
+    comm_context_t *ctx = comm_init(COMMS_NETWORK, CLIENT_IP, 0);
+    if (!ctx) {
+        std::cerr << "Failed to initialize network communication." << std::endl;
+        return -1;
+    }
+
+    uint8_t buffer[BUFFER_SIZE];
+
+    while (true) {
+        int bytes_read = ctx->driver->read(ctx, buffer, sizeof(buffer), 1000);
+        if (bytes_read > 0) {
+            std::cout << "Received " << bytes_read << " bytes: ";
+            for (int i = 0; i < bytes_read; ++i) {
+                std::cout << std::hex << (int)buffer[i] << " ";
+            }
+            std::cout << std::endl;
+        } else if (bytes_read == 0) {
+            std::cout << "No data received (timeout)." << std::endl;
+        } else {
+            std::cerr << "Error receiving data." << std::endl;
+            break;
+        }
+    }
+
+    return 0;
+}
+/*
 int main() {
   //comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/ttyTHS0", 4000000);
   comm_context_t *comm_ctx = comm_init(COMMS_NETWORK, "192.168.86.56", 0);
@@ -48,3 +82,4 @@ int main() {
 
   return 0;
 }
+*/
