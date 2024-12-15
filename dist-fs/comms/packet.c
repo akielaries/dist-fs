@@ -185,7 +185,6 @@ int decode_packet(comm_context_t *comm_ctx) {
   int ret =
     comm_ctx->driver->read(comm_ctx, buffer, DIST_FS_HEADER_SIZE, timeout_ms);
   if (ret == 0) {
-    LOG(INFO, "Read :");
     for (int i = 0; i < DIST_FS_HEADER_SIZE; i++) {
       printf("0x%X ", buffer[i]);
     }

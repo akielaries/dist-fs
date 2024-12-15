@@ -34,10 +34,8 @@ int main() {
   int rc = list_files_command(comm_ctx);
   LOG(INFO, "list_files_command() rc: %d", rc);
 
-  rc =
-    upload_files_command(comm_ctx,
-                         "../test_files/wavs/SPRING_ARC_VOL.3(120BPM)_v4.wav");
-  LOG(INFO, "upload_files_command() rc: %d", rc);
+  //rc = upload_files_command(comm_ctx, "../test_files/wavs/SPRING_ARC_VOL.3(120BPM)_v4.wav");
+  //LOG(INFO, "upload_files_command() rc: %d", rc);
 
   return 0;
 }
