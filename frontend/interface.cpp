@@ -35,7 +35,7 @@ crow::json::wvalue metadata_to_json() {
   }
 
   // Read the metadata table
-  std::vector<ssd_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
 
   // Prepare the JSON response
   crow::json::wvalue response;

@@ -36,11 +36,12 @@ typedef enum {
 
 /** @brief enumeration of file types */
 typedef enum {
-  DIST_FS_TYPE_WAV  = 0,
-  DIST_FS_TYPE_FLAC = 1,
-  DIST_FS_TYPE_AIFF = 2,
-  DIST_FS_TYPE_M4A  = 3,
-  DIST_FS_TYPE_MP3  = 4,
+  DIST_FS_TYPE_WAV    = 0,
+  DIST_FS_TYPE_FLAC   = 1,
+  DIST_FS_TYPE_AIFF   = 2,
+  DIST_FS_TYPE_M4A    = 3,
+  DIST_FS_TYPE_MP3    = 4,
+  //DIST_FS_TYPE_FOLDER = 5,
   /*add more files here*/
   DIST_FS_END,
   DIST_FS_NUM_TYPES = DIST_FS_END - 1,
@@ -69,7 +70,7 @@ typedef struct {
   uint64_t size;             // file size in bytes
   dist_fs_file_types_e type; // file type
   off_t offset;              // file offset in the drive
-  std::time_t timestamp;
+  std::time_t timestamp;     // file timestamp
 } file_info_t;
 
 int get_file_info(file_info_t &file_info, const char *filename);

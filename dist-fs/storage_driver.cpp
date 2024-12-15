@@ -157,6 +157,7 @@ static off_t metadata_table_find_offset(
 // hard drive operations
 /*****************************************************************************/
 int drive_info() {
+  LOG(INFO, "Getting drive information");
   // TODO get the total size of the drive and use the metadata table to get
   // how much of it is actually in use. should be fine with lseek?
   int rc = 0;
@@ -177,6 +178,31 @@ int upload_file(const char *filename) {
   // create some struct for file information here
   // INQUIRE: I should look into why ={0} creates a warning but ={} doesn't
   file_info_t file_info = {};
+
+  // TODO: somewhere here, we should check if filename is a directory or a single
+  // file. if a single file, we can proceed as normal, if a directory, the logic
+  // in this function should really be ran for each file
+
+  // TODO: I want to create a tree to keep track of the folder (root node) and
+  // child/parent nodes based on what's inside
+  /* below:
+    stems/                                  root node
+    └── wavs/                               grandparent node
+        ├── drums/                          parent node of subtree A
+        │   ├── track_hats.wav              child node
+        │   ├── track_shaker.wav            child node
+        │   ├── track_kicks.wav             child node
+        │   ├── track_snare_1.wav           child node
+        │   ├── track_snare_2.wav           child node
+        │   └── track_clap.wav              child node
+        └── keyboards/                      parent node of subtree B
+            ├── juno_bass.wav               child node
+            ├── juno_lead.wav               child node
+            ├── moog_bass.wav               child node
+            ├── moog_pad.wav                child node
+            ├── steinway_piano_part1.wav    child node
+            └── steinway_piano_part2.wav    child node
+  */
 
   // TODO: check for duplicates first before uploading? or maybe we dont care.
   // it would have to be byte by byte to make sure its not a copy
