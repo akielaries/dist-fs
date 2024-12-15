@@ -40,9 +40,14 @@ comm_driver_t network_ops = {
 };
 
 static int network_init(comm_context_t *ctx) {
-    if (!ctx || strlen(ctx->device) == 0) {
-        LOG(ERR, "Invalid context or server address");
+    if (!ctx) {
+        LOG(ERR, "Invalid context");
         return -1;
+    }
+    
+    if (!ctx || strlen(ctx->device) == 0) {
+      LOG(ERR, "Invalid address: %s", ctx->device);
+      return -1;
     }
 
     network_context_t *net_ctx = &ctx->network_ctx;

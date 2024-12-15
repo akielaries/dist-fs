@@ -12,15 +12,14 @@
 #include "comms/comms.h"
 #include "comms/packet.h"
 
-#define UART_DEVICE "/dev/ttyTHS0"
-#define BAUD_RATE   B115200
 
 int main() {
   //comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/ttyTHS0", 4000000);
-  comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/ttyTHS0", 4000000);
+  comm_context_t *comm_ctx = comm_init(COMMS_NETWORK, "192.168.86.56", 0);
 
   if (!comm_ctx) {
-    LOG(ERR, "Failed to initialize UART communication\n");
+    //LOG(ERR, "Failed to initialize UART communication\n");
+    LOG(ERR, "Failed to initialize NETWORK communication\n");
     return -1;
   }
   if (!comm_ctx->driver) {
