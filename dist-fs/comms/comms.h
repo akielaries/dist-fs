@@ -20,8 +20,8 @@ typedef enum {
 } comm_types_e;
 
 typedef struct {
-    int socket_fd;
-    struct sockaddr_in server_addr;
+  int socket_fd;
+  struct sockaddr_in server_addr;
 } network_context_t;
 
 typedef struct {

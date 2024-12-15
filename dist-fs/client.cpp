@@ -10,12 +10,12 @@
 
 
 int main() {
-  //comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/serial0", 4000000);
-    
+  // comm_context_t *comm_ctx = comm_init(COMMS_UART, "/dev/serial0", 4000000);
+
   comm_context_t *comm_ctx = comm_init(COMMS_NETWORK, "192.168.86.56", 0);
 
   if (!comm_ctx) {
-    //LOG(ERR, "Failed to initialize UART communication\n");
+    // LOG(ERR, "Failed to initialize UART communication\n");
     LOG(ERR, "Failed to initialize NETWORK communication\n");
     return -1;
   }
@@ -34,8 +34,9 @@ int main() {
   int rc = list_files_command(comm_ctx);
   LOG(INFO, "list_files_command() rc: %d", rc);
 
-  //rc = upload_files_command(comm_ctx, "../test_files/wavs/SPRING_ARC_VOL.3(120BPM)_v4.wav");
-  //LOG(INFO, "upload_files_command() rc: %d", rc);
+  // rc = upload_files_command(comm_ctx,
+  // "../test_files/wavs/SPRING_ARC_VOL.3(120BPM)_v4.wav"); LOG(INFO,
+  // "upload_files_command() rc: %d", rc);
 
   return 0;
 }

@@ -328,7 +328,8 @@ int download_file(const char *filename) {
   }
 
   // search for the filename in the metadata table
-  auto it = std::find_if(metadata_table.begin(), metadata_table.end(),
+  auto it = std::find_if(metadata_table.begin(),
+                         metadata_table.end(),
                          [filename](const storage_metadata_t &entry) {
                            return strcmp(entry.filename, filename) == 0;
                          });
@@ -339,16 +340,15 @@ int download_file(const char *filename) {
     return -1;
   }
 
-  // File found, get the start offset and size
   off_t start_offset = it->start_offset;
-  size_t file_size = it->size;
+  size_t file_size   = it->size;
 
   // extract basename from filename
   const char *basename = strrchr(filename, '/');
   if (basename) {
     basename++; // move past the '/'
   } else {
-    basename = filename; // no directory, use filename directly
+    basename = filename;
   }
 
   // create local binary file to write to
@@ -362,9 +362,11 @@ int download_file(const char *filename) {
   size_t buffer_size = 4096;
   std::vector<uint8_t> buffer(buffer_size);
 
-  // Read from SSD and write to local file
+  // read from SSD and write to local file
   ssize_t bytes_read = 0;
-  off_t offset = start_offset;
+  off_t offset       = start_offset;
+
+  time_t start_time = time(NULL);
 
   while (file_size > 0) {
     ssize_t read_size = pread(ssd_fd, buffer.data(), buffer_size, offset);
@@ -373,23 +375,39 @@ int download_file(const char *filename) {
       break; // exits the loop but don't exit the function prematurely
     }
 
-    // no more data to read
-    if (read_size == 0) break;
+    if (read_size == 0)
+      break;
 
     if (read_size > file_size) {
-      read_size = file_size; // adjust read size if it exceeds the file size
+      read_size = file_size;
     }
 
     fwrite(buffer.data(), 1, read_size, local_file);
+    bytes_read += read_size;
     file_size -= read_size;
     offset += read_size;
+
+    time_t elapsed_time = time(NULL) - start_time;
+    size_t download_speed_bps =
+      elapsed_time > 0 ? bytes_read / elapsed_time : 0;
+    double download_speed_mbps = download_speed_bps / (1024.0 * 1024.0);
+
+    // Update progress without clearing the line
+    printf("\r%zu/%zu bytes downloaded, %zu bytes left | bps: %zu, mbps: %.4f",
+           bytes_read,
+           it->size,
+           file_size,
+           download_speed_bps,
+           download_speed_mbps);
+    fflush(stdout);
   }
+  printf("\n");
 
   // close the local file and SSD device
   fclose(local_file);
   close(ssd_fd);
 
-  LOG(INFO, "File '%s' downloaded successfully.", basename);
+  LOG(INFO, "File '%s' downloaded successfully", basename);
 
   return 0;
 }

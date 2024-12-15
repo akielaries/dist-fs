@@ -11,7 +11,7 @@ extern "C" {
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#define PORT 8080
+#define PORT        8080
 #define BUFFER_SIZE 1024
 
 // Initialize the socket
@@ -28,4 +28,3 @@ int write_socket(int sockfd, const void *buffer, size_t size);
 #endif
 
 #endif // SOCKET_API_H
-

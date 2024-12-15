@@ -37,4 +37,3 @@ comm_driver_t network_ops = {
   .ioctl     = network_ioctl,
   */
 };
-
