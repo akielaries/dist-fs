@@ -11,32 +11,23 @@
 #include "comms.h"
 #include "../utils.hpp"
 
-
 #define NETWORK_DEFAULT_PORT 5000
 #define NETWORK_BUFFER_SIZE  1024
 
-
 static int network_init(comm_context_t *ctx);
 static int network_read_one(comm_context_t *ctx, uint16_t timeout_ms);
-static int network_read(comm_context_t *ctx,
-                        uint8_t *rx,
-                        uint32_t rx_sz,
-                        uint16_t timeout_ms);
-static int
-network_write_one(comm_context_t *ctx, uint8_t tx, uint16_t timeout_ms);
-static int network_write(comm_context_t *ctx,
-                         uint8_t *tx,
-                         uint32_t tx_size,
-                         uint16_t timeout_ms);
+static int network_read(comm_context_t *ctx, uint8_t *rx, uint32_t rx_sz, uint16_t timeout_ms);
+static int network_write_one(comm_context_t *ctx, uint8_t tx, uint16_t timeout_ms);
+static int network_write(comm_context_t *ctx, uint8_t *tx, uint32_t tx_size, uint16_t timeout_ms);
 static int network_ioctl(comm_context_t *ctx, uint8_t opcode, void *data);
 
 comm_driver_t network_ops = {
-  .init      = network_init,
-  .read_one  = network_read_one,
-  .read      = network_read,
-  .write_one = network_write_one,
-  .write     = network_write,
-  .ioctl     = network_ioctl,
+    .init = network_init,
+    .read_one = network_read_one,
+    .read = network_read,
+    .write_one = network_write_one,
+    .write = network_write,
+    .ioctl = network_ioctl,
 };
 
 static int network_init(comm_context_t *ctx) {
@@ -63,8 +54,12 @@ static int network_init(comm_context_t *ctx) {
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Bind to all interfaces
-    server_addr.sin_port = htons(NETWORK_DEFAULT_PORT);
+    server_addr.sin_addr.s_addr = inet_addr(ctx->device); // Use user-specified IP address
+    if (ctx->network_ctx.server_addr.sin_port == 0) {
+        ctx->network_ctx.server_addr.sin_port = htons(NETWORK_DEFAULT_PORT); // Default to NETWORK_DEFAULT_PORT
+    } else {
+        ctx->network_ctx.server_addr.sin_port = htons(ctx->network_ctx.server_addr.sin_port);
+    }
 
     // Step 3: Bind the socket to the address and port
     if (bind(net_ctx->socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
@@ -80,9 +75,9 @@ static int network_init(comm_context_t *ctx) {
         return -1;
     }
 
-    LOG(INFO, "Server listening on port %d", NETWORK_DEFAULT_PORT);
+    LOG(INFO, "Server listening on port %d", ntohs(server_addr.sin_port));
 
-    // Step 5: Accept a connection
+    // Step 5: Accept a connection if present
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
     int client_fd = accept(net_ctx->socket_fd, (struct sockaddr *)&client_addr, &client_len);
@@ -109,10 +104,7 @@ static int network_read_one(comm_context_t *ctx, uint16_t timeout_ms) {
     return (ret == 1) ? byte : -1;
 }
 
-static int network_read(comm_context_t *ctx,
-                        uint8_t *rx,
-                        uint32_t rx_sz,
-                        uint16_t timeout_ms) {
+static int network_read(comm_context_t *ctx, uint8_t *rx, uint32_t rx_sz, uint16_t timeout_ms) {
     if (!ctx || !rx) {
         LOG(ERR, "Invalid arguments to network_read");
         return -1;
@@ -120,7 +112,7 @@ static int network_read(comm_context_t *ctx,
 
     network_context_t *net_ctx = &ctx->network_ctx;
     struct timeval timeout = {
-        .tv_sec  = timeout_ms / 1000,
+        .tv_sec = timeout_ms / 1000,
         .tv_usec = (timeout_ms % 1000) * 1000,
     };
     fd_set read_fds;
@@ -146,10 +138,7 @@ static int network_write_one(comm_context_t *ctx, uint8_t tx, uint16_t timeout_m
     return network_write(ctx, &tx, 1, timeout_ms);
 }
 
-static int network_write(comm_context_t *ctx,
-                         uint8_t *tx,
-                         uint32_t tx_size,
-                         uint16_t timeout_ms) {
+static int network_write(comm_context_t *ctx, uint8_t *tx, uint32_t tx_size, uint16_t timeout_ms) {
     if (!ctx || !tx) {
         LOG(ERR, "Invalid arguments to network_write");
         return -1;
