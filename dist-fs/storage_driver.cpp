@@ -161,7 +161,7 @@ int drive_info() {
   // how much of it is actually in use. should be fine with lseek?
   int rc = 0;
 
-  //
+  // any way to grab manufacturer info? other hardware/device info?
 
   return rc;
 }

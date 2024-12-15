@@ -19,6 +19,7 @@ typedef struct {
   char filename[256]; // name
   off_t start_offset; // offset on ssd
   size_t size;        // file size in bytes
+  bool is_directory;  // is the file a directory or not
 } storage_metadata_t;
 
 
