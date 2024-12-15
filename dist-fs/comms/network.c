@@ -9,6 +9,12 @@
 #include <errno.h>
 
 #include "comms.h"
+#include "../utils.hpp"
+
+
+#define NETWORK_DEFAULT_PORT 5000
+#define NETWORK_BUFFER_SIZE  1024
+
 
 static int network_init(comm_context_t *ctx);
 static int network_read_one(comm_context_t *ctx, uint16_t timeout_ms);
@@ -34,32 +40,32 @@ comm_driver_t network_ops = {
 };
 
 static int network_init(comm_context_t *ctx) {
-    if (!ctx || !ctx->path) {
+    if (!ctx || strlen(ctx->device) == 0) {
         LOG(ERR, "Invalid context or server address");
         return -1;
     }
 
     network_context_t *net_ctx = &ctx->network_ctx;
 
-    // Create socket
+    // stocket creation
     net_ctx->socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (net_ctx->socket_fd < 0) {
         LOG(ERR, "Socket creation failed: %s", strerror(errno));
         return -1;
     }
 
-    // Configure server address
+    // configure server address
     memset(&net_ctx->server_addr, 0, sizeof(net_ctx->server_addr));
     net_ctx->server_addr.sin_family = AF_INET;
     net_ctx->server_addr.sin_port = htons(NETWORK_DEFAULT_PORT);
 
-    if (inet_pton(AF_INET, ctx->path, &net_ctx->server_addr.sin_addr) <= 0) {
-        LOG(ERR, "Invalid server address: %s", ctx->path);
+    if (inet_pton(AF_INET, ctx->device, &net_ctx->server_addr.sin_addr) <= 0) {
+        LOG(ERR, "Invalid server address: %s", ctx->device);
         close(net_ctx->socket_fd);
         return -1;
     }
 
-    // Connect to server
+    // connect to server
     if (connect(net_ctx->socket_fd,
                 (struct sockaddr *)&net_ctx->server_addr,
                 sizeof(net_ctx->server_addr)) < 0) {
@@ -68,7 +74,7 @@ static int network_init(comm_context_t *ctx) {
         return -1;
     }
 
-    LOG(INFO, "Network initialized and connected to %s:%d", ctx->path, NETWORK_DEFAULT_PORT);
+    LOG(INFO, "Network initialized and connected to %s:%d", ctx->device, NETWORK_DEFAULT_PORT);
     return 0;
 }
 
@@ -111,8 +117,7 @@ static int network_read(comm_context_t *ctx,
     return bytes_read;
 }
 
-static int
-network_write_one(comm_context_t *ctx, uint8_t tx, uint16_t timeout_ms) {
+static int network_write_one(comm_context_t *ctx, uint8_t tx, uint16_t timeout_ms) {
     return network_write(ctx, &tx, 1, timeout_ms);
 }
 
@@ -142,3 +147,4 @@ static int network_ioctl(comm_context_t *ctx, uint8_t opcode, void *data) {
     (void)data;
     return -1;
 }
+
