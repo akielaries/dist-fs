@@ -49,10 +49,11 @@ typedef struct {
 /* command functions */
 int list_files_command(comm_context_t *comm_ctx);
 int upload_files_command(comm_context_t *comm_ctx, const char *filename);
-/* packet functions */
+/* test function for echoing packets */
 int test_packet(comm_context_t *comm_ctx,
                 uint8_t *payload,
                 uint16_t payload_size);
+/* packet functions */
 int encode_packet(dist_fs_ops_e command,
                   uint8_t *payload,
                   uint32_t payload_size,

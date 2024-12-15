@@ -43,8 +43,7 @@ static comm_driver_t *find_comm_driver(comm_types_e type) {
 }
 
 /** brief top level initialize function */
-comm_context_t *
-comm_init(comm_types_e type, const char *device, uint32_t baud) {
+comm_context_t *comm_init(comm_types_e type, const char *device, uint32_t baud) {
   LOG(INFO,
       "Initializing comm driver type {%d} on device {%s} with baud {%u}...",
       type,

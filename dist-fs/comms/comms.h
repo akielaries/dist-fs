@@ -2,9 +2,10 @@
 #define COMMS_H
 
 #include <stdint.h>
-
 #include <stdio.h>
 #include <time.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 
 typedef struct comm_driver_t comm_driver_t;
@@ -19,10 +20,16 @@ typedef enum {
 } comm_types_e;
 
 typedef struct {
+    int socket_fd;
+    struct sockaddr_in server_addr;
+} network_context_t;
+
+typedef struct {
   uint8_t type;
   uint32_t baud;
   char device[128];
   comm_driver_t *driver;
+  network_context_t network_ctx;
 } comm_context_t;
 
 typedef struct comm_driver_t {
