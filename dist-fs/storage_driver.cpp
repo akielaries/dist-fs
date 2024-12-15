@@ -344,6 +344,11 @@ int download_file(const char *filename) {
   size_t file_size   = it->size;
 
   // extract basename from filename
+  // TODO: should also be a way to pattern match names. the way files are stored
+  // doesn't always match the exact way it was stored e.g.:
+  // - SPRING_ARC_VOL.3(120BPM)_v4.wav
+  // - SPRING_ARC_VOL.3\(120BPM\)_v4.wav
+  // just a filesystem quirk on the local side
   const char *basename = strrchr(filename, '/');
   if (basename) {
     basename++; // move past the '/'
