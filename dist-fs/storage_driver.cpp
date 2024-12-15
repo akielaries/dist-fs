@@ -359,7 +359,8 @@ int download_file(const char *filename) {
     return -1;
   }
 
-  size_t buffer_size = 4096;
+  // this will have a solid effect on the transfer speed
+  size_t buffer_size = 1024;
   std::vector<uint8_t> buffer(buffer_size);
 
   // read from SSD and write to local file
@@ -392,7 +393,7 @@ int download_file(const char *filename) {
       elapsed_time > 0 ? bytes_read / elapsed_time : 0;
     double download_speed_mbps = download_speed_bps / (1024.0 * 1024.0);
 
-    // Update progress without clearing the line
+    // update progress without clearing the line
     printf("\r%zu/%zu bytes downloaded, %zu bytes left | bps: %zu, mbps: %.4f",
            bytes_read,
            it->size,
