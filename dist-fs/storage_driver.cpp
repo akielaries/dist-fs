@@ -77,8 +77,7 @@ static bool metadata_table_write(int ssd_fd,
   return true;
 }
 
-static int
-metadata_table_print(const std::vector<storage_metadata_t> &metadata_table) {
+int metadata_table_print(const std::vector<storage_metadata_t> &metadata_table) {
   // each column will have a dynamic size
   size_t max_filename_length = 0;
   size_t max_offset_length   = 0;

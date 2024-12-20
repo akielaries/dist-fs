@@ -37,6 +37,8 @@ int drive_info();
 
 std::vector<storage_metadata_t> metadata_table_read(int ssd_fd);
 
+int metadata_table_print(const std::vector<storage_metadata_t> &metadata_table);
+
 /* main SSD operations */
 int upload_file(const char *filename);
 int download_file(const char *filename);
