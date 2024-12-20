@@ -23,6 +23,15 @@ typedef struct {
 } storage_metadata_t;
 
 
+// metadata table starts at the very beginning of the drive
+constexpr const off_t METADATA_TABLE_OFFSET = 0;
+// max files I want to track for now...
+constexpr const size_t MAX_FILES = 1024;
+// total size of the metadata table
+constexpr const size_t METADATA_TABLE_SZ =
+  sizeof(storage_metadata_t) * MAX_FILES;
+
+
 /* hard drive operations */
 int drive_info();
 

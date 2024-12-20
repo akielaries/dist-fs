@@ -9,8 +9,8 @@
 #include <chrono>
 
 #include "utils.hpp"
-#include "comms/comms.h"
-#include "comms/packet.h"
+#include "dist-fs/comms/comms.h"
+#include "dist-fs/comms/packet.h"
 
 
 int main() {
