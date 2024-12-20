@@ -59,6 +59,8 @@ else()
     add_executable(dist-fs ${DIST_FS_SOURCES})
 endif()
 
+add_subdirectory(unittests)
+
 # Optional: Link any additional libraries here
 # target_link_libraries(dist-fs <library_name>)
 # target_link_libraries(dist-fs_server <library_name>)
