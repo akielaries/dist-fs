@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   size_t reset_size                           = 0;
 
   // set a default name for config
-  const char *config_file     = "../dist-fs_client.conf";
+  const char *config_file     = "../client.conf";
   config_context_t config_ctx = {};
 
   // parse config file
@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
           rc = -1;
           goto cleanup;
         }
-        upload_file(optarg);
+        upload_file(config_ctx, optarg);
         break;
 
       case 'd': // --download
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
           goto cleanup;
         }
         LOG(INFO, "calling download_file");
-        rc = download_file(optarg);
+        rc = download_file(config_ctx, optarg);
         LOG(INFO, "rc : %d", rc);
         break;
 
@@ -119,11 +119,11 @@ int main(int argc, char *argv[]) {
           rc = -1;
           goto cleanup;
         }
-        delete_file(optarg);
+        delete_file(config_ctx, optarg);
         break;
 
       case 'l': // --list
-        list_files();
+        list_files(config_ctx);
         drive_info();
         break;
 

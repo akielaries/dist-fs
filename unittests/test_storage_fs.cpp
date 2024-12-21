@@ -13,6 +13,7 @@ class UploadFileTest : public ::testing::Test {
 protected:
   int ssd_fd;                // File descriptor for SSD
   const char* test_filename; // Path to the test file
+  config_context_t config_ctx = {};
 
   void SetUp() override {
     // Open the SSD device
@@ -33,7 +34,7 @@ protected:
 
 TEST_F(UploadFileTest, UploadValidFile) {
   // Upload the file
-  int result = upload_file(test_filename);
+  int result = upload_file(config_ctx, test_filename);
   EXPECT_EQ(result, 0) << "File upload failed";
 
   // Check metadata table
@@ -55,4 +56,3 @@ TEST_F(UploadFileTest, UploadValidFile) {
 
   EXPECT_TRUE(file_found) << "Uploaded file not found in metadata table";
 }
-

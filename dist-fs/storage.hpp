@@ -1,10 +1,11 @@
 #pragma once
 
 #include <cstdint>
-
 #include <vector>
 
 #include "audio_files.hpp"
+
+#include "config.hpp"
 
 
 #define DIST_FS_SSD_PATTERN_SZ 8
@@ -40,10 +41,10 @@ std::vector<storage_metadata_t> metadata_table_read(int ssd_fd);
 int metadata_table_print(const std::vector<storage_metadata_t> &metadata_table);
 
 /* main SSD operations */
-int upload_file(const char *filename);
-int download_file(const char *filename);
-int delete_file(const char *filename);
-int list_files();
+int upload_file(config_context_t cfg_ctx, const char *filename);
+int download_file(config_context_t cfg_ctx, const char *filename);
+int delete_file(config_context_t cfg_ctx, const char *filename);
+int list_files(config_context_t cfg_ctx);
 
 /* SSD test functions */
 int ssd_echo(const uint8_t *pattern);

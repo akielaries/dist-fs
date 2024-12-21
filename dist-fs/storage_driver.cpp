@@ -161,7 +161,7 @@ int drive_info() {
 /*****************************************************************************/
 
 /*TODO: I suspect some heavy optimizations will need to be done here */
-int upload_file(const char *filename) {
+int upload_file(config_context_t cfg_ctx, const char *filename) {
   LOG(INFO, "Uploading file: %s", filename);
   int rc = 0;
 
@@ -172,7 +172,6 @@ int upload_file(const char *filename) {
   // TODO: somewhere here, we should check if filename is a directory or a single
   // file. if a single file, we can proceed as normal, if a directory, the logic
   // in this function should really be ran for each file
-
   // TODO: I want to create a tree to keep track of the folder (root node) and
   // child/parent nodes based on what's inside
   /* below:
@@ -194,8 +193,7 @@ int upload_file(const char *filename) {
             └── steinway_piano_part2.wav    child node
   */
 
-  // TODO: check for duplicates first before uploading? or maybe we dont care.
-  // it would have to be byte by byte to make sure its not a copy
+  // get file info. for now this is only available for audio files
   rc = get_file_info(file_info, filename);
   if (rc != 0) {
     LOG(ERR, "Failed to retrieve file info for: %s", filename);
@@ -203,7 +201,7 @@ int upload_file(const char *filename) {
   }
 
   // open SSD
-  int ssd_fd = open(DEVICE_PATH, O_RDWR);
+  int ssd_fd = open(cfg_ctx.drive_full_path, O_RDWR);
   if (ssd_fd == -1) {
     LOG(ERR, "Error opening SSD");
     return 1;
@@ -326,12 +324,12 @@ int upload_file(const char *filename) {
   return 0;
 }
 
-int download_file(const char *filename) {
+int download_file(config_context_t cfg_ctx, const char *filename) {
   LOG(INFO, "Downloading file: %s", filename);
 
-  int ssd_fd = open(DEVICE_PATH, O_RDONLY);
+  int ssd_fd = open(cfg_ctx.drive_full_path, O_RDONLY);
   if (ssd_fd < 0) {
-    LOG(ERR, "Failed to open SSD device: %s", DEVICE_PATH);
+    LOG(ERR, "Failed to open SSD device: %s", cfg_ctx.drive_full_path);
     return -1;
   }
 
@@ -434,10 +432,10 @@ int download_file(const char *filename) {
   return 0;
 }
 
-int delete_file(const char *filename) {
+int delete_file(config_context_t cfg_ctx, const char *filename) {
   LOG(INFO, "Deleting file: %s", filename);
   // open SSD
-  int ssd_fd = open(DEVICE_PATH, O_RDWR);
+  int ssd_fd = open(cfg_ctx.drive_full_path, O_RDWR);
   if (ssd_fd == -1) {
     LOG(ERR, "Error opening SSD");
     return -1;
@@ -528,11 +526,11 @@ int delete_file(const char *filename) {
   return 0;
 }
 
-int list_files() {
+int list_files(config_context_t cfg_ctx) {
   LOG(INFO, "Listing all files on the drive");
 
   // open SSD
-  int ssd_fd = open(DEVICE_PATH, O_RDWR);
+  int ssd_fd = open(cfg_ctx.drive_full_path, O_RDWR);
   if (ssd_fd == -1) {
     LOG(ERR, "Error opening SSD");
     return 1;
