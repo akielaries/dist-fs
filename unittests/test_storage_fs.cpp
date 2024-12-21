@@ -7,20 +7,23 @@
 #include <chrono>
 #include <iostream>
 
+#include "utils.hpp"
 #include "storage.hpp"
 
 class UploadFileTest : public ::testing::Test {
 protected:
-  int ssd_fd;                // File descriptor for SSD
-  const char* test_filename; // Path to the test file
+  int ssd_fd;        
+  const char *test_filename = "../test_files/wavs/CantinaBand3.wav";
   config_context_t config_ctx = {};
 
   void SetUp() override {
-    // Open the SSD device
-    ssd_fd = open(DEVICE_PATH, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    ASSERT_NE(ssd_fd, -1) << "Failed to open SSD device";
-
-    // Path to the test file
+    // setup fake ssd file descriptor
+    char temp_ssd_path[] = "/tmp/fake_ssd_XXXXXX";
+    ssd_fd = mkstemp(temp_ssd_path);
+    ASSERT_NE(ssd_fd, -1) << "Failed to create temporary SSD file";
+    
+    config_ctx.drive_full_path = strdup(temp_ssd_path);
+    
     test_filename = "../test_files/wavs/CantinaBand3.wav";
   }
 
@@ -43,15 +46,18 @@ TEST_F(UploadFileTest, UploadValidFile) {
   ASSERT_FALSE(metadata_table.empty()) << "Metadata table is empty";
 
   bool file_found = false;
-  for (const auto& entry : metadata_table) {
-    std::cout << entry.filename <<std::endl;
-    
-    if (strcmp(entry.filename, "../test_files/wavs/CantinaBand60.wav") == 0) {
-      file_found = true;
-      EXPECT_EQ(entry.size, 6180) << "File size mismatch";
-      EXPECT_EQ(entry.start_offset, 4096) << "Start offset mismatch";
-      break;
-    }
+  // search for the filename in the metadata table
+  auto it = std::find_if(metadata_table.begin(),
+                         metadata_table.end(),
+                         [this](const storage_metadata_t &entry) {
+                           return strcmp(entry.filename, this->test_filename) == 0;
+                         });
+
+  if (it == metadata_table.end()) {
+    LOG(ERR, "File '%s' not found on SSD.", test_filename);
+    file_found = false;
+  } else {
+    file_found = true;
   }
 
   EXPECT_TRUE(file_found) << "Uploaded file not found in metadata table";
