@@ -147,6 +147,18 @@ static off_t metadata_table_find_offset(
 
 // hard drive operations
 /*****************************************************************************/
+int drive_provision(config_context_t cfg_ctx) {
+  (void) cfg_ctx;
+  // TODO this should provision the first N bytes of the drive with some 
+  // information. there should always be a check for some magic numbers to
+  // ensure the drive we are working with is indeed the right one and produce
+  // some sort of warning/error on failure
+
+  int rc = 0;
+
+  return rc;
+}
+
 int drive_info() {
   LOG(INFO, "Getting drive information");
   // TODO get the total size of the drive and use the metadata table to get

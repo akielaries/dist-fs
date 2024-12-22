@@ -37,6 +37,7 @@ constexpr size_t PACKET_METADATA_SIZE =
   sizeof(file_info_t) + DIST_FS_SSD_HEADER_SZ;
 
 /* hard drive operations */
+int drive_provision(config_context_t cfg_ctx);
 int drive_info();
 
 std::vector<storage_metadata_t> metadata_table_read(int ssd_fd);
