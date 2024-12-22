@@ -48,9 +48,7 @@ std::vector<storage_metadata_t> md_table_read(int ssd_fd) {
   return md_table;
 }
 
-bool md_table_write(int ssd_fd,
-                                 const storage_metadata_t &entry,
-                                 size_t index) {
+bool md_table_write(int ssd_fd, const storage_metadata_t &entry, size_t index) {
   off_t entry_offset =
     METADATA_TABLE_OFFSET + (index * sizeof(storage_metadata_t));
   LOG(INFO, "Writing metadata entry at offset: 0x%08lX", entry_offset);
@@ -77,8 +75,7 @@ bool md_table_write(int ssd_fd,
   return true;
 }
 
-int md_table_print(
-  const std::vector<storage_metadata_t> &md_table) {
+int md_table_print(const std::vector<storage_metadata_t> &md_table) {
   // each column will have a dynamic size
   size_t max_filename_length = 0;
   size_t max_offset_length   = 0;
@@ -122,8 +119,7 @@ int md_table_print(
   return 0;
 }
 
-off_t md_table_find_offset(
-  const std::vector<storage_metadata_t> &md_table) {
+off_t md_table_find_offset(const std::vector<storage_metadata_t> &md_table) {
   LOG(INFO, "Finding next free offset for file storage");
   const off_t METADATA_SIZE = MAX_FILES * sizeof(storage_metadata_t);
   LOG(INFO, "Metadata Size          : %d", METADATA_SIZE);
@@ -145,8 +141,10 @@ off_t md_table_find_offset(
   return max_end_offset;
 }
 
-int update_md_table(int ssd_fd, const file_info_t &file_info, 
-                    const char *filename, size_t index) {
+int update_md_table(int ssd_fd,
+                    const file_info_t &file_info,
+                    const char *filename,
+                    size_t index) {
   storage_metadata_t new_entry = {};
   strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
   new_entry.start_offset = file_info.offset;
@@ -155,7 +153,7 @@ int update_md_table(int ssd_fd, const file_info_t &file_info,
   LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
   LOG(INFO, " start_offset : 0x%X", new_entry.start_offset);
   LOG(INFO, " size         : %d bytes", new_entry.size);
-  
+
   LOG(INFO, "Metadata table size : %d", index);
   if (!md_table_write(ssd_fd, new_entry, index)) {
     LOG(ERR, "Failed to write metadata entry for file: %s", filename);
@@ -186,6 +184,9 @@ int write_fs_header(int ssd_fd,
       strip_newline(std::ctime(&file_info.timestamp)).c_str());
 
 
+  // TODO/BUG: endianness matters for the header, does it for the rest of the
+  // data?? unit tests should expose if this is the case as it verifies the file
+  // uploaded vs the one downloaded
   *header_be = htobe32(DIST_FS_SSD_HEADER);
   lseek(ssd_fd, offset, SEEK_SET);
   if (write(ssd_fd, &header_be, sizeof(header_be)) != sizeof(header_be)) {
@@ -251,7 +252,7 @@ int initialize_ssd(config_context_t cfg_ctx, int &ssd_fd, off_t &next_offset) {
     return 1;
   }
   std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
-  next_offset = md_table_find_offset(md_table);
+  next_offset                              = md_table_find_offset(md_table);
   LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
   return 0;
 }
@@ -259,9 +260,7 @@ int initialize_ssd(config_context_t cfg_ctx, int &ssd_fd, off_t &next_offset) {
 
 // file operations
 /*****************************************************************************/
-int transfer_file_data(int file_fd,
-                       int ssd_fd,
-                       off_t offset) {
+int transfer_file_data(int file_fd, int ssd_fd, off_t offset) {
   LOG(INFO, "Writing file data to SSD at offset: 0x%08lX", offset);
 
   char buffer[4096];
@@ -292,7 +291,7 @@ int transfer_file_data(int file_fd,
     static_cast<double>(total_bytes_written) / duration.count();
   LOG(INFO, "Total bytes written: %ld", total_bytes_written);
   LOG(INFO, "Upload time: %.2f seconds", duration.count());
-  LOG(INFO, 
+  LOG(INFO,
       "Upload speed: %.2f kbps | %.2f mbps",
       upload_speed / 1024,
       upload_speed / 1024 / 1024);
@@ -369,8 +368,7 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
 
   if (transfer_file_data(file_fd,
                          ssd_fd,
-                         next_offset + sizeof(uint32_t) + sizeof(file_info)
-                         )) {
+                         next_offset + sizeof(uint32_t) + sizeof(file_info))) {
     close(file_fd);
     close(ssd_fd);
     return 1;

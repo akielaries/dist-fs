@@ -6,7 +6,7 @@
 #include "storage.hpp"
 
 // Mock data for metadata table
-const size_t MOCK_METADATA_ENTRIES                            = 3;
+const size_t MOCK_METADATA_ENTRIES                      = 3;
 storage_metadata_t mock_md_table[MOCK_METADATA_ENTRIES] = {
   {"file1.txt", 1024, 512, false},
   {"file2.txt", 2048, 1024, false},
