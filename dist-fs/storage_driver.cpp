@@ -147,6 +147,14 @@ static off_t metadata_table_find_offset(
 
 // hard drive operations
 /*****************************************************************************/
+bool is_drive_provisioned(config_context_t cfg_ctx) {
+  (void) cfg_ctx;
+
+  // TODO check if a hard drive is provisioned or not
+
+  return true;
+}
+
 int drive_provision(config_context_t cfg_ctx) {
   (void) cfg_ctx;
   // TODO this should provision the first N bytes of the drive with some 
