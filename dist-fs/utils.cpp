@@ -61,16 +61,18 @@ const char *log_to_str(log_level_e level) {
 void log(log_level_e level,
          const char *file,
          uint16_t line,
+         const char *func,
          const char *msg,
          ...) {
   va_list args;
   va_start(args, msg);
 
-  // just the file name, not full path...
   const char *filename = basename(const_cast<char *>(file));
 
-  std::cout << "[" << log_to_str(level) << "] " << std::setw(22) << std::left
-            << (std::string(filename) + ":" + std::to_string(line)) << " - ";
+  std::cout << "[" << log_to_str(level) << "] " << std::setw(40) << std::left
+            << (std::string(filename) + ":" + std::to_string(line) + " (" +
+                func + ")")
+            << " - ";
 
   vfprintf(stdout, msg, args);
   std::cout << std::endl;

@@ -145,10 +145,46 @@ static off_t metadata_table_find_offset(
   return max_end_offset;
 }
 
+int write_fs_header(int ssd_fd,
+                    off_t offset,
+                    const file_info_t &file_info,
+                    uint32_t *header_be) {
+  LOG(INFO, "Creating FS header");
+  LOG(INFO, " start bytes: 0x%8X", DIST_FS_SSD_HEADER);
+  LOG(INFO, " filename : hex:() ascii:(%s)", file_info.name);
+  LOG(INFO,
+      " file size: %db | %dkb | %dmb | %dgb",
+      file_info.size,
+      (file_info.size / 1024),
+      (file_info.size / 1024) / 1024,
+      ((file_info.size / 1024) / 1024) / 1024);
+  LOG(INFO, " file type: %d", file_info.type);
+  LOG(INFO, " file offset: %d", file_info.offset);
+  LOG(INFO,
+      " file timestamp: %s",
+      strip_newline(std::ctime(&file_info.timestamp)).c_str());
+
+
+  *header_be = htobe32(DIST_FS_SSD_HEADER);
+  lseek(ssd_fd, offset, SEEK_SET);
+  if (write(ssd_fd, &header_be, sizeof(header_be)) != sizeof(header_be)) {
+    LOG(ERR, "Failed to write FS header");
+    return 1;
+  }
+  lseek(ssd_fd, offset + 4, SEEK_SET);
+  LOG(INFO, "Writing FS header at offset: 0x%08lX", offset);
+  if (write(ssd_fd, &file_info, sizeof(file_info)) != sizeof(file_info)) {
+    LOG(ERR, "Failed to write file info");
+    return 1;
+  }
+  return 0;
+}
+
+
 // hard drive operations
 /*****************************************************************************/
-static bool is_drive_provisioned(config_context_t cfg_ctx) {
-  (void) cfg_ctx;
+bool is_drive_provisioned(config_context_t cfg_ctx) {
+  (void)cfg_ctx;
 
   // TODO check if a hard drive is provisioned or not
 
@@ -156,8 +192,8 @@ static bool is_drive_provisioned(config_context_t cfg_ctx) {
 }
 
 int drive_provision(config_context_t cfg_ctx) {
-  (void) cfg_ctx;
-  // TODO this should provision the first N bytes of the drive with some 
+  (void)cfg_ctx;
+  // TODO this should provision the first N bytes of the drive with some
   // information. there should always be a check for some magic numbers to
   // ensure the drive we are working with is indeed the right one and produce
   // some sort of warning/error on failure
@@ -167,7 +203,7 @@ int drive_provision(config_context_t cfg_ctx) {
   // check if provisioned already
   // is_provisioned = is_drive_provisioned(cfg_ctx);
   // if (is_provisioned) {
-  //   LOG(INFO, "Drive %s is already provisioned for dist-fs", 
+  //   LOG(INFO, "Drive %s is already provisioned for dist-fs",
   //              cfg_ctx.drive_full_path);
   //   return -1;
   // }
@@ -176,7 +212,7 @@ int drive_provision(config_context_t cfg_ctx) {
 }
 
 int drive_info(config_context_t cfg_ctx) {
-  (void) cfg_ctx;
+  (void)cfg_ctx;
   LOG(INFO, "Getting drive information");
   // TODO get the total size of the drive and use the metadata table to get
   // how much of it is actually in use. should be fine with lseek?
@@ -187,8 +223,44 @@ int drive_info(config_context_t cfg_ctx) {
   return rc;
 }
 
-// file operations, upload, delete, list, etc
+int initialize_ssd(config_context_t cfg_ctx, int &ssd_fd, off_t &next_offset) {
+  ssd_fd = open(cfg_ctx.drive_full_path, O_RDWR);
+  if (ssd_fd == -1) {
+    LOG(ERR, "Error opening SSD");
+    return 1;
+  }
+  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  next_offset = metadata_table_find_offset(metadata_table);
+  LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
+  return 0;
+}
+
+
+// file operations
 /*****************************************************************************/
+int transfer_file_data(int file_fd,
+                       int ssd_fd,
+                       off_t offset,
+                       ssize_t &total_bytes_written) {
+  char buffer[4096];
+  ssize_t bytes_read, bytes_written;
+  total_bytes_written = 0;
+
+  lseek(ssd_fd, offset, SEEK_SET);
+  while ((bytes_read = read(file_fd, buffer, sizeof(buffer))) > 0) {
+    bytes_written = write(ssd_fd, buffer, bytes_read);
+    if (bytes_written != bytes_read) {
+      LOG(ERR, "Failed to write file data");
+      return 1;
+    }
+    total_bytes_written += bytes_written;
+  }
+  if (bytes_read == -1) {
+    LOG(ERR, "Error reading file");
+    return 1;
+  }
+  return 0;
+}
 
 /*TODO: I suspect some heavy optimizations will need to be done here */
 int upload_file(config_context_t cfg_ctx, const char *filename) {
@@ -230,48 +302,21 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
     return 1;
   }
 
-  // open SSD
-  int ssd_fd = open(cfg_ctx.drive_full_path, O_RDWR);
-  if (ssd_fd == -1) {
-    LOG(ERR, "Error opening SSD");
+  // open SSD + read from the metadata table to get the next available
+  // offset in the FS
+  int ssd_fd;
+  off_t next_offset;
+  if (initialize_ssd(cfg_ctx, ssd_fd, next_offset)) {
     return 1;
   }
+  file_info.offset = next_offset;
+
+  uint32_t header_be;
+
+  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
 
   // read from the metadata table to get the next available offset in the FS
-  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
-  off_t next_offset = metadata_table_find_offset(metadata_table);
-  file_info.offset  = next_offset;
-
-  LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
-  LOG(INFO, "Creating FS header");
-  LOG(INFO, " start bytes: 0x%8X", DIST_FS_SSD_HEADER);
-  LOG(INFO, " filename : hex:() ascii:(%s)", file_info.name);
-  LOG(INFO,
-      " file size: %db | %dkb | %dmb | %dgb",
-      file_info.size,
-      (file_info.size / 1024),
-      (file_info.size / 1024) / 1024,
-      ((file_info.size / 1024) / 1024) / 1024);
-  LOG(INFO, " file type: %d", file_info.type);
-  LOG(INFO, " file offset: %d", file_info.offset);
-  LOG(INFO,
-      " file timestamp: %s",
-      strip_newline(std::ctime(&file_info.timestamp)).c_str());
-  LOG(INFO, "Writing FS header at offset: 0x%08lX", next_offset);
-  // TODO/BUG: why does endianness matter here? I suspect something fishy
-  uint32_t header_be = htobe32(DIST_FS_SSD_HEADER);
-  lseek(ssd_fd, next_offset, SEEK_SET);
-  write(ssd_fd, &header_be, sizeof(header_be));
-
-  if (lseek(ssd_fd, next_offset + 4, SEEK_SET) == -1) {
-    LOG(ERR, "Failed to seek to offset 0x%08lX", next_offset);
-    close(ssd_fd);
-    return 1;
-  }
-
-  ssize_t written = write(ssd_fd, &file_info, sizeof(file_info));
-  if (written != sizeof(file_info)) {
-    LOG(ERR, "Failed to write file header");
+  if (write_fs_header(ssd_fd, next_offset, file_info, &header_be)) {
     close(ssd_fd);
     return 1;
   }
@@ -284,41 +329,23 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
     return 1;
   }
 
-  // a 4kb buffer to chunkify the upload
-  char buffer[4096];
-  ssize_t bytes_read, bytes_written;
-
-  // keep track of upload time
-  auto start_time = std::chrono::high_resolution_clock::now();
-
   LOG(INFO,
       "Writing file data to SSD at offset: 0x%08lX",
       file_info.offset + sizeof(header_be) + sizeof(file_info));
 
-  // move the offset to the correct position for writing the file content
-  lseek(ssd_fd,
-        file_info.offset + sizeof(header_be) + sizeof(file_info),
-        SEEK_SET);
-
-  off_t total_bytes_written = 0;
-
-  // read the file and write to the SSD
-  while ((bytes_read = read(file_fd, buffer, sizeof(buffer))) > 0) {
-    bytes_written = write(ssd_fd, buffer, bytes_read);
-    if (bytes_written != bytes_read) {
-      LOG(ERR, "Failed to write file data to SSD");
-      close(file_fd);
-      close(ssd_fd);
-      return 1;
-    }
-    total_bytes_written += bytes_written;
+  ssize_t total_bytes_written;
+  auto start_time = std::chrono::high_resolution_clock::now();
+  if (transfer_file_data(file_fd,
+                         ssd_fd,
+                         next_offset + sizeof(uint32_t) + sizeof(file_info),
+                         total_bytes_written)) {
+    close(file_fd);
+    close(ssd_fd);
+    return 1;
   }
   auto end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end_time - start_time;
 
-  if (bytes_read == -1) {
-    LOG(ERR, "Error reading file: %s", filename);
-  }
 
   //  upload speed (bytes per second)
   double upload_speed =
@@ -336,8 +363,8 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
   new_entry.size         = file_info.size;
 
   LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
-  LOG(INFO, " start_offset : %d", new_entry.start_offset);
-  LOG(INFO, " size         : %d", new_entry.size);
+  LOG(INFO, " start_offset : 0x%X", new_entry.start_offset);
+  LOG(INFO, " size         : %d bytes", new_entry.size);
 
   size_t index = metadata_table.size();
   LOG(INFO, "Metadata table size : %d", index);
