@@ -77,7 +77,8 @@ static bool metadata_table_write(int ssd_fd,
   return true;
 }
 
-int metadata_table_print(const std::vector<storage_metadata_t> &metadata_table) {
+int metadata_table_print(
+  const std::vector<storage_metadata_t> &metadata_table) {
   // each column will have a dynamic size
   size_t max_filename_length = 0;
   size_t max_offset_length   = 0;
@@ -169,9 +170,9 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
   // INQUIRE: I should look into why ={0} creates a warning but ={} doesn't
   file_info_t file_info = {};
 
-  // TODO: somewhere here, we should check if filename is a directory or a single
-  // file. if a single file, we can proceed as normal, if a directory, the logic
-  // in this function should really be ran for each file
+  // TODO: somewhere here, we should check if filename is a directory or a
+  // single file. if a single file, we can proceed as normal, if a directory,
+  // the logic in this function should really be ran for each file
   // TODO: I want to create a tree to keep track of the folder (root node) and
   // child/parent nodes based on what's inside
   /* below:
@@ -333,7 +334,6 @@ int download_file(config_context_t cfg_ctx, const char *filename) {
     return -1;
   }
 
-  // read the metadata table
   std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
   if (metadata_table.empty()) {
     LOG(ERR, "Failed to read SSD metadata table.");
@@ -341,7 +341,6 @@ int download_file(config_context_t cfg_ctx, const char *filename) {
     return -1;
   }
 
-  // search for the filename in the metadata table
   auto it = std::find_if(metadata_table.begin(),
                          metadata_table.end(),
                          [filename](const storage_metadata_t &entry) {
@@ -354,23 +353,11 @@ int download_file(config_context_t cfg_ctx, const char *filename) {
     return -1;
   }
 
-  off_t start_offset = it->start_offset;
-  size_t file_size   = it->size;
-
-  // extract basename from filename
-  // TODO: should also be a way to pattern match names. the way files are stored
-  // doesn't always match the exact way it was stored e.g.:
-  // - SPRING_ARC_VOL.3(120BPM)_v4.wav
-  // - SPRING_ARC_VOL.3\(120BPM\)_v4.wav
-  // just a filesystem quirk on the local side
+  off_t start_offset   = it->start_offset;
+  size_t file_size     = it->size;
   const char *basename = strrchr(filename, '/');
-  if (basename) {
-    basename++; // move past the '/'
-  } else {
-    basename = filename;
-  }
+  basename             = (basename) ? basename + 1 : filename;
 
-  // create local binary file to write to
   FILE *local_file = fopen(basename, "wb");
   if (!local_file) {
     LOG(ERR, "Failed to create local file: %s", basename);
@@ -378,57 +365,30 @@ int download_file(config_context_t cfg_ctx, const char *filename) {
     return -1;
   }
 
-  // this will have a solid effect on the transfer speed
-  size_t buffer_size = 1024;
-  std::vector<uint8_t> buffer(buffer_size);
-
-  // read from SSD and write to local file
-  ssize_t bytes_read = 0;
-  off_t offset       = start_offset;
-
-  time_t start_time = time(NULL);
+  char buffer[4096];
+  ssize_t bytes_read;
+  off_t file_offset =
+    start_offset + sizeof(DIST_FS_SSD_HEADER) + sizeof(file_info_t);
 
   while (file_size > 0) {
-    ssize_t read_size = pread(ssd_fd, buffer.data(), buffer_size, offset);
-    if (read_size < 0) {
-      LOG(ERR, "Failed to read from SSD at offset %ld", offset);
-      break; // exits the loop but don't exit the function prematurely
+    size_t to_read = std::min(file_size, sizeof(buffer));
+    bytes_read     = pread(ssd_fd, buffer, to_read, file_offset);
+    if (bytes_read <= 0) {
+      LOG(ERR, "Failed to read from SSD at offset %ld", file_offset);
+      fclose(local_file);
+      close(ssd_fd);
+      return -1;
     }
 
-    if (read_size == 0)
-      break;
-
-    if (read_size > file_size) {
-      read_size = file_size;
-    }
-
-    fwrite(buffer.data(), 1, read_size, local_file);
-    bytes_read += read_size;
-    file_size -= read_size;
-    offset += read_size;
-
-    time_t elapsed_time = time(NULL) - start_time;
-    size_t download_speed_bps =
-      elapsed_time > 0 ? bytes_read / elapsed_time : 0;
-    double download_speed_mbps = download_speed_bps / (1024.0 * 1024.0);
-
-    // update progress without clearing the line
-    printf("\r%zu/%zu bytes downloaded, %zu bytes left | bps: %zu, mbps: %.4f",
-           bytes_read,
-           it->size,
-           file_size,
-           download_speed_bps,
-           download_speed_mbps);
-    fflush(stdout);
+    fwrite(buffer, 1, bytes_read, local_file);
+    file_size -= bytes_read;
+    file_offset += bytes_read;
   }
-  printf("\n");
 
-  // close the local file and SSD device
   fclose(local_file);
   close(ssd_fd);
 
   LOG(INFO, "File '%s' downloaded successfully", basename);
-
   return 0;
 }
 

@@ -9,6 +9,7 @@
 
 
 #define DIST_FS_SSD_PATTERN_SZ 8
+#define DIST_FS_SSD_HEADER_SZ  4
 // these are the start bytes for each file in the file system
 #define DIST_FS_SSD_HEADER 0xDEADBEEF
 
@@ -32,6 +33,8 @@ constexpr const size_t MAX_FILES = 1024;
 constexpr const size_t METADATA_TABLE_SZ =
   sizeof(storage_metadata_t) * MAX_FILES;
 
+constexpr size_t PACKET_METADATA_SIZE =
+  sizeof(file_info_t) + DIST_FS_SSD_HEADER_SZ;
 
 /* hard drive operations */
 int drive_info();
