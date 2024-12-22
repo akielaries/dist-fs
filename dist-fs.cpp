@@ -123,8 +123,8 @@ int main(int argc, char *argv[]) {
         break;
 
       case 'l': // --list
+        drive_info(config_ctx);
         list_files(config_ctx);
-        drive_info();
         break;
 
       case 'S': // --ssd_echo

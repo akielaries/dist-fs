@@ -147,7 +147,7 @@ static off_t metadata_table_find_offset(
 
 // hard drive operations
 /*****************************************************************************/
-bool is_drive_provisioned(config_context_t cfg_ctx) {
+static bool is_drive_provisioned(config_context_t cfg_ctx) {
   (void) cfg_ctx;
 
   // TODO check if a hard drive is provisioned or not
@@ -164,10 +164,19 @@ int drive_provision(config_context_t cfg_ctx) {
 
   int rc = 0;
 
+  // check if provisioned already
+  // is_provisioned = is_drive_provisioned(cfg_ctx);
+  // if (is_provisioned) {
+  //   LOG(INFO, "Drive %s is already provisioned for dist-fs", 
+  //              cfg_ctx.drive_full_path);
+  //   return -1;
+  // }
+
   return rc;
 }
 
-int drive_info() {
+int drive_info(config_context_t cfg_ctx) {
+  (void) cfg_ctx;
   LOG(INFO, "Getting drive information");
   // TODO get the total size of the drive and use the metadata table to get
   // how much of it is actually in use. should be fine with lseek?
