@@ -376,22 +376,6 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
     return 1;
   }
 
-  storage_metadata_t new_entry = {};
-  strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
-  new_entry.start_offset = file_info.offset;
-  new_entry.size         = file_info.size;
-
-  LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
-  LOG(INFO, " start_offset : 0x%X", new_entry.start_offset);
-  LOG(INFO, " size         : %d bytes", new_entry.size);
-
-  size_t index = md_table.size();
-  LOG(INFO, "Metadata table size : %d", index);
-  if (!md_table_write(ssd_fd, new_entry, index)) {
-    LOG(ERR, "Failed to write metadata entry for file: %s", filename);
-    return 1;
-  }
-
   // update the metadata table with a new entry
   if (update_md_table(ssd_fd, file_info, filename, md_table.size())) {
     close(file_fd);
