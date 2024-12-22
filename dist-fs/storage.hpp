@@ -40,9 +40,9 @@ constexpr size_t PACKET_METADATA_SIZE =
 int drive_provision(config_context_t cfg_ctx);
 int drive_info(config_context_t cfg_ctx);
 
-std::vector<storage_metadata_t> metadata_table_read(int ssd_fd);
+std::vector<storage_metadata_t> md_table_read(int ssd_fd);
 
-int metadata_table_print(const std::vector<storage_metadata_t> &metadata_table);
+int md_table_print(const std::vector<storage_metadata_t> &md_table);
 
 /* main SSD operations */
 int upload_file(config_context_t cfg_ctx, const char *filename);

@@ -17,14 +17,14 @@
 
 // metadata table operations
 /*****************************************************************************/
-std::vector<storage_metadata_t> metadata_table_read(int ssd_fd) {
+std::vector<storage_metadata_t> md_table_read(int ssd_fd) {
   LOG(INFO, "Reading SSD metadata table");
-  std::vector<storage_metadata_t> metadata_table;
+  std::vector<storage_metadata_t> md_table;
 
   // seek from beginning of file
   if (lseek(ssd_fd, 0, SEEK_SET) == -1) {
     LOG(ERR, "Failed to seek to metadata table");
-    return metadata_table;
+    return md_table;
   }
 
   // read the metadata section
@@ -32,7 +32,7 @@ std::vector<storage_metadata_t> metadata_table_read(int ssd_fd) {
   ssize_t bytes_read             = read(ssd_fd, buffer, 278528);
   if (bytes_read <= 0) {
     LOG(INFO, "No metadata found. Initializing empty table.");
-    return metadata_table;
+    return md_table;
   }
 
   // parse metadata entries
@@ -41,14 +41,14 @@ std::vector<storage_metadata_t> metadata_table_read(int ssd_fd) {
 
   for (size_t i = 0; i < num_entries; ++i) {
     if (entries[i].start_offset != 0) { // valid entry check
-      metadata_table.push_back(entries[i]);
+      md_table.push_back(entries[i]);
     }
   }
 
-  return metadata_table;
+  return md_table;
 }
 
-static bool metadata_table_write(int ssd_fd,
+bool md_table_write(int ssd_fd,
                                  const storage_metadata_t &entry,
                                  size_t index) {
   off_t entry_offset =
@@ -77,14 +77,14 @@ static bool metadata_table_write(int ssd_fd,
   return true;
 }
 
-int metadata_table_print(
-  const std::vector<storage_metadata_t> &metadata_table) {
+int md_table_print(
+  const std::vector<storage_metadata_t> &md_table) {
   // each column will have a dynamic size
   size_t max_filename_length = 0;
   size_t max_offset_length   = 0;
   size_t max_size_length     = 0;
 
-  for (const auto &entry : metadata_table) {
+  for (const auto &entry : md_table) {
     max_filename_length = std::max(max_filename_length, strlen(entry.filename));
     max_offset_length =
       std::max(max_offset_length, std::to_string(entry.start_offset).size());
@@ -109,7 +109,7 @@ int metadata_table_print(
             << std::endl;
 
   // print the data rows with dynamic column widths
-  for (const auto &entry : metadata_table) {
+  for (const auto &entry : md_table) {
     std::cout << std::left << std::setw(filename_width) << entry.filename
               << " | " << std::right << std::setw(offset_width) << std::hex
               << entry.start_offset << " | " << std::right
@@ -122,14 +122,14 @@ int metadata_table_print(
   return 0;
 }
 
-static off_t metadata_table_find_offset(
-  const std::vector<storage_metadata_t> &metadata_table) {
+off_t md_table_find_offset(
+  const std::vector<storage_metadata_t> &md_table) {
   LOG(INFO, "Finding next free offset for file storage");
   const off_t METADATA_SIZE = MAX_FILES * sizeof(storage_metadata_t);
   LOG(INFO, "Metadata Size          : %d", METADATA_SIZE);
   LOG(INFO, "Max files              : %d", MAX_FILES);
   LOG(INFO, "sizeof(storage_metadata_t) : %d", sizeof(storage_metadata_t));
-  if (metadata_table.empty()) {
+  if (md_table.empty()) {
     LOG(INFO, "No files, starting right after metadata section");
     return METADATA_SIZE;
   }
@@ -137,13 +137,34 @@ static off_t metadata_table_find_offset(
   // start searching after the metadata section
   off_t max_end_offset = METADATA_SIZE;
   // find the highest end offset among all files
-  for (const auto &entry : metadata_table) {
+  for (const auto &entry : md_table) {
     off_t end_offset = entry.start_offset + entry.size;
     if (end_offset > max_end_offset)
       max_end_offset = end_offset;
   }
   return max_end_offset;
 }
+
+int update_md_table(int ssd_fd, const file_info_t &file_info, 
+                    const char *filename, size_t index) {
+  storage_metadata_t new_entry = {};
+  strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
+  new_entry.start_offset = file_info.offset;
+  new_entry.size         = file_info.size;
+
+  LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
+  LOG(INFO, " start_offset : 0x%X", new_entry.start_offset);
+  LOG(INFO, " size         : %d bytes", new_entry.size);
+  
+  LOG(INFO, "Metadata table size : %d", index);
+  if (!md_table_write(ssd_fd, new_entry, index)) {
+    LOG(ERR, "Failed to write metadata entry for file: %s", filename);
+    return 1;
+  }
+
+  return 0;
+}
+
 
 int write_fs_header(int ssd_fd,
                     off_t offset,
@@ -229,8 +250,8 @@ int initialize_ssd(config_context_t cfg_ctx, int &ssd_fd, off_t &next_offset) {
     LOG(ERR, "Error opening SSD");
     return 1;
   }
-  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
-  next_offset = metadata_table_find_offset(metadata_table);
+  std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
+  next_offset = md_table_find_offset(md_table);
   LOG(INFO, "Next free offset: 0x%08lX/%d", next_offset, next_offset);
   return 0;
 }
@@ -240,13 +261,16 @@ int initialize_ssd(config_context_t cfg_ctx, int &ssd_fd, off_t &next_offset) {
 /*****************************************************************************/
 int transfer_file_data(int file_fd,
                        int ssd_fd,
-                       off_t offset,
-                       ssize_t &total_bytes_written) {
+                       off_t offset) {
+  LOG(INFO, "Writing file data to SSD at offset: 0x%08lX", offset);
+
   char buffer[4096];
-  ssize_t bytes_read, bytes_written;
-  total_bytes_written = 0;
+  ssize_t bytes_read, bytes_written, total_bytes_written;
 
   lseek(ssd_fd, offset, SEEK_SET);
+
+  auto start_time = std::chrono::high_resolution_clock::now();
+
   while ((bytes_read = read(file_fd, buffer, sizeof(buffer))) > 0) {
     bytes_written = write(ssd_fd, buffer, bytes_read);
     if (bytes_written != bytes_read) {
@@ -255,10 +279,24 @@ int transfer_file_data(int file_fd,
     }
     total_bytes_written += bytes_written;
   }
+  auto end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end_time - start_time;
+
   if (bytes_read == -1) {
     LOG(ERR, "Error reading file");
     return 1;
   }
+
+  // upload speed (bytes per second)
+  double upload_speed =
+    static_cast<double>(total_bytes_written) / duration.count();
+  LOG(INFO, "Total bytes written: %ld", total_bytes_written);
+  LOG(INFO, "Upload time: %.2f seconds", duration.count());
+  LOG(INFO, 
+      "Upload speed: %.2f kbps | %.2f mbps",
+      upload_speed / 1024,
+      upload_speed / 1024 / 1024);
+
   return 0;
 }
 
@@ -313,7 +351,7 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
 
   uint32_t header_be;
 
-  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
 
   // read from the metadata table to get the next available offset in the FS
   if (write_fs_header(ssd_fd, next_offset, file_info, &header_be)) {
@@ -329,33 +367,14 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
     return 1;
   }
 
-  LOG(INFO,
-      "Writing file data to SSD at offset: 0x%08lX",
-      file_info.offset + sizeof(header_be) + sizeof(file_info));
-
-  ssize_t total_bytes_written;
-  auto start_time = std::chrono::high_resolution_clock::now();
   if (transfer_file_data(file_fd,
                          ssd_fd,
-                         next_offset + sizeof(uint32_t) + sizeof(file_info),
-                         total_bytes_written)) {
+                         next_offset + sizeof(uint32_t) + sizeof(file_info)
+                         )) {
     close(file_fd);
     close(ssd_fd);
     return 1;
   }
-  auto end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> duration = end_time - start_time;
-
-
-  //  upload speed (bytes per second)
-  double upload_speed =
-    static_cast<double>(total_bytes_written) / duration.count();
-  LOG(INFO, "Total bytes written: %ld", total_bytes_written);
-  LOG(INFO, "Upload time: %.2f seconds", duration.count());
-  LOG(INFO,
-      "Upload speed: %.2f kbps | %.2f mbps",
-      upload_speed / 1024,
-      upload_speed / 1024 / 1024);
 
   storage_metadata_t new_entry = {};
   strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
@@ -366,13 +385,19 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
   LOG(INFO, " start_offset : 0x%X", new_entry.start_offset);
   LOG(INFO, " size         : %d bytes", new_entry.size);
 
-  size_t index = metadata_table.size();
+  size_t index = md_table.size();
   LOG(INFO, "Metadata table size : %d", index);
-  if (!metadata_table_write(ssd_fd, new_entry, index)) {
+  if (!md_table_write(ssd_fd, new_entry, index)) {
     LOG(ERR, "Failed to write metadata entry for file: %s", filename);
     return 1;
   }
 
+  // update the metadata table with a new entry
+  if (update_md_table(ssd_fd, file_info, filename, md_table.size())) {
+    close(file_fd);
+    close(ssd_fd);
+    return 1;
+  }
 
   // close both file descriptors
   close(file_fd);
@@ -390,20 +415,20 @@ int download_file(config_context_t cfg_ctx, const char *filename) {
     return -1;
   }
 
-  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
-  if (metadata_table.empty()) {
+  std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
+  if (md_table.empty()) {
     LOG(ERR, "Failed to read SSD metadata table.");
     close(ssd_fd);
     return -1;
   }
 
-  auto it = std::find_if(metadata_table.begin(),
-                         metadata_table.end(),
+  auto it = std::find_if(md_table.begin(),
+                         md_table.end(),
                          [filename](const storage_metadata_t &entry) {
                            return strcmp(entry.filename, filename) == 0;
                          });
 
-  if (it == metadata_table.end()) {
+  if (it == md_table.end()) {
     LOG(ERR, "File '%s' not found on SSD.", filename);
     close(ssd_fd);
     return -1;
@@ -458,26 +483,26 @@ int delete_file(config_context_t cfg_ctx, const char *filename) {
   }
 
   // read the metadata table
-  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
 
   // search for filename in metadata table
   LOG(INFO, "Searching for file: %s in metadata table", filename);
   // set index to something invalid
-  size_t file_index = metadata_table.size();
-  for (size_t i = 0; i < metadata_table.size(); ++i) {
-    if (strcmp(metadata_table[i].filename, filename) == 0) {
+  size_t file_index = md_table.size();
+  for (size_t i = 0; i < md_table.size(); ++i) {
+    if (strcmp(md_table[i].filename, filename) == 0) {
       file_index = i;
       break;
     }
   }
 
-  if (file_index == metadata_table.size()) {
+  if (file_index == md_table.size()) {
     LOG(WARN, "File %s not found in metadata table", filename);
     close(ssd_fd);
     return -1;
   }
 
-  const storage_metadata_t &file_entry = metadata_table[file_index];
+  const storage_metadata_t &file_entry = md_table[file_index];
   LOG(INFO,
       "Found file %s with offset 0x%x and size %u bytes",
       file_entry.filename,
@@ -510,12 +535,12 @@ int delete_file(config_context_t cfg_ctx, const char *filename) {
 
   // remove the metadata entry
   LOG(INFO, "Deleting metadata entry for file {%s}", file_entry.filename);
-  metadata_table.erase(metadata_table.begin() + file_index);
+  md_table.erase(md_table.begin() + file_index);
 
   // rewrite the updated metadata table back to the SSD
   LOG(INFO, "Rewriting metadata table");
-  for (size_t i = 0; i < metadata_table.size(); ++i) {
-    if (!metadata_table_write(ssd_fd, metadata_table[i], i)) {
+  for (size_t i = 0; i < md_table.size(); ++i) {
+    if (!md_table_write(ssd_fd, md_table[i], i)) {
       LOG(ERR, "Failed to write metadata table entry %zu", i);
       close(ssd_fd);
       return -1;
@@ -524,9 +549,9 @@ int delete_file(config_context_t cfg_ctx, const char *filename) {
 
   // zero out the unused metadata entry space
   storage_metadata_t empty_entry = {};
-  size_t empty_index             = metadata_table.size();
+  size_t empty_index             = md_table.size();
   LOG(INFO, "Zeroing out unused metadata entry space");
-  if (!metadata_table_write(ssd_fd, empty_entry, empty_index)) {
+  if (!md_table_write(ssd_fd, empty_entry, empty_index)) {
     LOG(ERR,
         "Failed to clear the unused metadata entry at index %zu",
         empty_index);
@@ -553,10 +578,10 @@ int list_files(config_context_t cfg_ctx) {
   }
 
   // read the metadata table
-  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
+  std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
 
-  LOG(INFO, "Number of files : %d", metadata_table.size());
-  metadata_table_print(metadata_table);
+  LOG(INFO, "Number of files : %d", md_table.size());
+  md_table_print(md_table);
 
   return 0;
 }

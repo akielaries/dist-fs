@@ -39,19 +39,19 @@ TEST_F(UploadFileTest, UploadValidFile) {
   int result = upload_file(config_ctx, test_filename);
   EXPECT_EQ(result, 0) << "File upload failed";
 
-  std::vector<storage_metadata_t> metadata_table = metadata_table_read(ssd_fd);
-  metadata_table_print(metadata_table);
-  ASSERT_FALSE(metadata_table.empty()) << "Metadata table is empty";
+  std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
+  md_table_print(md_table);
+  ASSERT_FALSE(md_table.empty()) << "Metadata table is empty";
 
   bool file_found = false;
   auto it =
-    std::find_if(metadata_table.begin(),
-                 metadata_table.end(),
+    std::find_if(md_table.begin(),
+                 md_table.end(),
                  [this](const storage_metadata_t &entry) {
                    return strcmp(entry.filename, this->test_filename) == 0;
                  });
 
-  if (it == metadata_table.end()) {
+  if (it == md_table.end()) {
     LOG(ERR, "File '%s' not found on SSD.", test_filename);
     file_found = false;
   } else {
