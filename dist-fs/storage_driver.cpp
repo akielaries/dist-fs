@@ -143,9 +143,11 @@ bool md_table_write(int ssd_fd, storage_metadata_t &entry, size_t index) {
 int md_table_print(const std::vector<storage_metadata_t> &md_table) {
   // determine maximum column widths dynamically
   size_t max_filename_length = 0;
-  size_t max_index_length    = 0 + 5;
+  size_t max_index_length    = 0 + 5; // index is 5 chars long
   size_t max_offset_length   = 0;
   size_t max_size_length     = 0;
+  size_t max_kb_length       = 0;
+  size_t max_mb_length       = 0;
 
   for (const auto &entry : md_table) {
     max_filename_length = std::max(max_filename_length, strlen(entry.filename));
@@ -155,6 +157,10 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
       std::max(max_offset_length, std::to_string(entry.start_offset).size());
     max_size_length =
       std::max(max_size_length, std::to_string(entry.size).size());
+    max_kb_length =
+      std::max(max_kb_length, std::to_string(entry.size / 1024).size());
+    max_mb_length =
+      std::max(max_mb_length, std::to_string(entry.size / 1024 / 1024).size());
   }
 
   // cast size_t to int for setw
@@ -162,12 +168,16 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
   int index_width    = static_cast<int>(max_index_length);
   int offset_width   = static_cast<int>(max_offset_length);
   int size_width     = static_cast<int>(max_size_length);
+  int size_kb_width  = static_cast<int>(max_kb_length);
+  int size_mb_width  = static_cast<int>(max_mb_length);
 
   // print the header row with dynamic column widths
   std::cout << std::left << std::setw(filename_width) << "Name"
             << " | " << std::setw(index_width) << "Index"
             << " | " << std::setw(offset_width) << "Offset"
-            << " | " << std::setw(size_width) << "Bytes"
+            << " | " << std::setw(size_width) << "bytes"
+            << " | " << std::setw(size_kb_width) << "kb"
+            << " | " << std::setw(size_mb_width) << "mb"
             << " | " << std::setw(20) << "Last Modified"
             << " | " << std::setw(20) << "Last Accessed"
             << " | " << std::setw(20) << "Created"
@@ -175,7 +185,7 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
 
   // print the separator line
   std::cout << std::string(filename_width + index_width + offset_width +
-                             size_width + 100,
+                             size_width + size_kb_width + size_mb_width + 100,
                            '-')
             << std::endl;
 
@@ -195,14 +205,17 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
 
     std::cout << std::left << std::setw(filename_width) << entry.filename
               << " | " << std::right << std::setw(index_width + 1) << std::hex
-              << entry.index << "|" << std::right << std::setw(offset_width)
+              << entry.index << "|" << std::right << std::setw(offset_width + 1)
               << std::hex << entry.start_offset << " | " << std::right
               << std::setw(size_width) << std::dec << entry.size << " | "
-              << std::setw(20) << format_time(entry.file_time.last_modified)
-              << " | " << std::setw(20)
-              << format_time(entry.file_time.last_accessed) << " | "
-              << std::setw(20) << format_time(entry.file_time.created) << " | "
-              << std::setw(20) << format_time(entry.file_time.uploaded)
+              << std::right << std::setw(size_kb_width) << std::dec
+              << entry.size / 1024 << " | " << std::right
+              << std::setw(size_mb_width) << std::dec
+              << entry.size / 1024 / 1024 << " | " << std::setw(20)
+              << format_time(entry.file_time.last_modified) << " | "
+              << std::setw(20) << format_time(entry.file_time.last_accessed)
+              << " | " << std::setw(20) << format_time(entry.file_time.created)
+              << " | " << std::setw(20) << format_time(entry.file_time.uploaded)
               << std::endl;
   }
 
