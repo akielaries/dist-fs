@@ -71,7 +71,7 @@ typedef struct {
   std::time_t last_accessed; /**< File last accessed*/
   std::time_t created;       /**< File created*/
   std::time_t uploaded;      /**< File uploaded*/
-} file_time_info_t;
+} file_times_t;
 
 /** @brief  */
 typedef struct {

@@ -12,6 +12,7 @@
 
 #include "utils.hpp"
 
+
 std::string hex_to_ascii(const std::array<char, 16> &header) {
   std::ostringstream oss;
   for (int i = 0; i < 16; ++i) {

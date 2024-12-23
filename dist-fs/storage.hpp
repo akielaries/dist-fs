@@ -36,11 +36,11 @@
  * @brief Structure to hold metadata information for files on the SSD
  */
 typedef struct {
-  char filename[256]; /**< File name (including directories) */
-  off_t start_offset; /**< Offset on the SSD where the file begins */
-  size_t size;        /**< File size in bytes */
-  bool is_directory;  /**< Flag indicating if the entry is a directory */
-  // file_time_info_t file_time; /**< File timestamps */
+  char filename[256];     /**< File name (including directories) */
+  off_t start_offset;     /**< Offset on the SSD where the file begins */
+  size_t size;            /**< File size in bytes */
+  bool is_directory;      /**< Flag indicating if the entry is a directory */
+  file_times_t file_time; /**< File timestamps */
 } storage_metadata_t;
 
 /** @brief Offset where the metadata table begins on the SSD */

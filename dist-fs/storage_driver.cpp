@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <endian.h>
+#include <sys/stat.h>
 
 #include <vector>
 #include <cstring>
@@ -14,6 +15,70 @@
 #include "audio_files.hpp"
 #include "storage.hpp"
 
+
+int get_time_info(storage_metadata_t *md_table) {
+  if (!md_table) {
+    fprintf(stderr, "Error: md_table pointer is NULL\n");
+    return -1;
+  }
+
+  struct stat file_stat;
+  if (stat(md_table->filename, &file_stat) == -1) {
+    perror("stat");
+    return -1;
+  }
+
+  // populate file_times_t
+  md_table->file_time.last_modified = file_stat.st_mtime;
+  md_table->file_time.last_accessed = file_stat.st_atime;
+
+#ifdef __USE_STATX
+  // if the system supports statx, attempt to retrieve creation time
+  struct statx file_statx;
+  if (statx(AT_FDCWD,
+            md_table->filename,
+            AT_STATX_SYNC_AS_STAT,
+            STATX_BTIME,
+            &file_statx) == 0) {
+    md_table->file_time.created = file_statx.stx_btime.tv_sec;
+  } else {
+    perror("statx");
+    md_table->file_time.created = 0;
+  }
+#else
+  // use ctime as a fallback for systems without statx
+  md_table->file_time.created = file_stat.st_ctime;
+#endif
+
+  // set uploaded timestamp to current time
+  struct timespec now;
+  if (clock_gettime(CLOCK_REALTIME, &now) == -1) {
+    perror("clock_gettime");
+    return -1;
+  }
+  md_table->file_time.uploaded = now.tv_sec;
+
+  LOG(INFO, "Time info for file {%s}", md_table->filename);
+  char time_buffer[64];
+
+  struct tm *tm_info = localtime(&md_table->file_time.last_modified);
+  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", tm_info);
+  LOG(INFO, "  - last modified: %s", time_buffer);
+
+  tm_info = localtime(&md_table->file_time.last_accessed);
+  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", tm_info);
+  LOG(INFO, "  - last accessed: %s", time_buffer);
+
+  tm_info = localtime(&md_table->file_time.created);
+  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", tm_info);
+  LOG(INFO, "  - created: %s", time_buffer);
+
+  tm_info = localtime(&md_table->file_time.uploaded);
+  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", tm_info);
+  LOG(INFO, "  - uploaded: %s", time_buffer);
+
+  return 0; // Success
+}
 
 // metadata table operations
 /*****************************************************************************/
@@ -29,9 +94,9 @@ std::vector<storage_metadata_t> md_table_read(int ssd_fd) {
 
   // read the metadata section
   char buffer[METADATA_TABLE_SZ] = {0};
-  ssize_t bytes_read             = read(ssd_fd, buffer, 278528);
+  ssize_t bytes_read             = read(ssd_fd, buffer, METADATA_TABLE_SZ);
   if (bytes_read <= 0) {
-    LOG(INFO, "No metadata found. Initializing empty table.");
+    LOG(INFO, "No metadata found. Initializing empty table");
     return md_table;
   }
 
@@ -48,7 +113,7 @@ std::vector<storage_metadata_t> md_table_read(int ssd_fd) {
   return md_table;
 }
 
-bool md_table_write(int ssd_fd, const storage_metadata_t &entry, size_t index) {
+bool md_table_write(int ssd_fd, storage_metadata_t &entry, size_t index) {
   off_t entry_offset =
     METADATA_TABLE_OFFSET + (index * sizeof(storage_metadata_t));
   LOG(INFO, "Writing metadata entry at offset: 0x%08lX", entry_offset);
@@ -76,7 +141,7 @@ bool md_table_write(int ssd_fd, const storage_metadata_t &entry, size_t index) {
 }
 
 int md_table_print(const std::vector<storage_metadata_t> &md_table) {
-  // each column will have a dynamic size
+  // determine maximum column widths dynamically
   size_t max_filename_length = 0;
   size_t max_offset_length   = 0;
   size_t max_size_length     = 0;
@@ -95,24 +160,42 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
   int size_width     = static_cast<int>(max_size_length);
 
   // print the header row with dynamic column widths
-  std::cout << std::left << std::setw(filename_width) << "\nName"
+  std::cout << std::left << std::setw(filename_width) << "Name"
             << " | " << std::setw(offset_width) << "Offset"
-            << " | " << std::setw(size_width) << "bytes"
-            << " | " << std::setw(10) << "kb"
-            << " | " << std::setw(5) << "mb" << std::endl;
+            << " | " << std::setw(size_width) << "Bytes"
+            << " | " << std::setw(20) << "Last Modified"
+            << " | " << std::setw(20) << "Last Accessed"
+            << " | " << std::setw(20) << "Created"
+            << " | " << std::setw(20) << "Uploaded" << std::endl;
 
   // print the separator line
-  std::cout << std::string(filename_width + offset_width + size_width + 35, '-')
+  std::cout << std::string(filename_width + offset_width + size_width + 100,
+                           '-')
             << std::endl;
 
   // print the data rows with dynamic column widths
   for (const auto &entry : md_table) {
+    // format timestamps
+    auto format_time = [](std::time_t t) -> std::string {
+      std::ostringstream oss;
+      std::tm *tm_info = std::localtime(&t);
+      if (tm_info) {
+        oss << std::put_time(tm_info, "%Y-%m-%d %H:%M:%S");
+      } else {
+        oss << "N/A"; // handle invalid times
+      }
+      return oss.str();
+    };
+
     std::cout << std::left << std::setw(filename_width) << entry.filename
               << " | " << std::right << std::setw(offset_width) << std::hex
               << entry.start_offset << " | " << std::right
               << std::setw(size_width) << std::dec << entry.size << " | "
-              << std::right << std::setw(10) << entry.size / 1024 << " | "
-              << std::right << std::setw(5) << entry.size / 1024 / 1024
+              << std::setw(20) << format_time(entry.file_time.last_modified)
+              << " | " << std::setw(20)
+              << format_time(entry.file_time.last_accessed) << " | "
+              << std::setw(20) << format_time(entry.file_time.created) << " | "
+              << std::setw(20) << format_time(entry.file_time.uploaded)
               << std::endl;
   }
 
@@ -141,22 +224,40 @@ off_t md_table_find_offset(const std::vector<storage_metadata_t> &md_table) {
   return max_end_offset;
 }
 
+/*
 int update_md_table(int ssd_fd,
                     const file_info_t &file_info,
                     const char *filename,
                     size_t index) {
-  storage_metadata_t new_entry = {};
-  strncpy(new_entry.filename, filename, sizeof(new_entry.filename) - 1);
-  new_entry.start_offset = file_info.offset;
-  new_entry.size         = file_info.size;
+*/
+
+int update_md_table(storage_metadata_t *md_table,
+                    file_info_t &file_info,
+                    int ssd_fd) {
+
+  std::vector<storage_metadata_t> md_vector = md_table_read(ssd_fd);
+  // index in the metadata table
+  size_t index = md_vector.size();
+
+
+  // get file information
+  int rc = get_time_info(md_table);
+  if (rc != 0) {
+    LOG(ERR, "Error getting time information : {%d}", rc);
+    return rc;
+  }
+
+
+  md_table->start_offset = file_info.offset;
+  md_table->size         = file_info.size;
 
   LOG(INFO, "Updating metadata table with entry for file : %s", file_info.name);
-  LOG(INFO, " start_offset : 0x%X", new_entry.start_offset);
-  LOG(INFO, " size         : %d bytes", new_entry.size);
+  LOG(INFO, " start_offset : 0x%X", md_table->start_offset);
+  LOG(INFO, " size         : %d bytes", md_table->size);
 
   LOG(INFO, "Metadata table size : %d", index);
-  if (!md_table_write(ssd_fd, new_entry, index)) {
-    LOG(ERR, "Failed to write metadata entry for file: %s", filename);
+  if (!md_table_write(ssd_fd, *md_table, index)) {
+    LOG(ERR, "Failed to write metadata entry for file: %s", md_table->filename);
     return 1;
   }
 
@@ -339,6 +440,7 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
     return 1;
   }
 
+
   // open SSD + read from the metadata table to get the next available
   // offset in the FS
   int ssd_fd;
@@ -350,7 +452,8 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
 
   uint32_t header_be;
 
-  std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
+  // TODO this shouldnt be here anymore?
+  // std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
 
   // read from the metadata table to get the next available offset in the FS
   if (write_fs_header(ssd_fd, next_offset, file_info, &header_be)) {
@@ -374,8 +477,12 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
     return 1;
   }
 
+  storage_metadata_t md_table;
+  strncpy(md_table.filename, filename, sizeof(md_table.filename) - 1);
+
   // update the metadata table with a new entry
-  if (update_md_table(ssd_fd, file_info, filename, md_table.size())) {
+  if (update_md_table(&md_table, file_info, ssd_fd)) {
+    // if (update_md_table(ssd_fd, file_info, filename, md_table.size())) {
     close(file_fd);
     close(ssd_fd);
     return 1;
