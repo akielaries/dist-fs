@@ -141,6 +141,7 @@ bool md_table_write(int ssd_fd, storage_metadata_t &entry, size_t index) {
 }
 
 int md_table_print(const std::vector<storage_metadata_t> &md_table) {
+  // TODO get rid of all the static definitions of line widths
   // determine maximum column widths dynamically
   size_t max_filename_length = 0;
   size_t max_index_length    = 0 + 5; // index is 5 chars long
@@ -204,7 +205,7 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
     };
 
     std::cout << std::left << std::setw(filename_width) << entry.filename
-              << " | " << std::right << std::setw(index_width + 1) << std::hex
+              << " | " << std::right << std::setw(index_width + 1) 
               << entry.index << "|" << std::right << std::setw(offset_width + 1)
               << std::hex << entry.start_offset << " | " << std::right
               << std::setw(size_width) << std::dec << entry.size << " | "
