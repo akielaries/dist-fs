@@ -40,6 +40,7 @@ typedef struct {
   off_t start_offset;     /**< Offset on the SSD where the file begins */
   size_t size;            /**< File size in bytes */
   bool is_directory;      /**< Flag indicating if the entry is a directory */
+  size_t index;           /**< Index in the metadata table */
   file_times_t file_time; /**< File timestamps */
 } storage_metadata_t;
 

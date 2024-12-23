@@ -143,11 +143,14 @@ bool md_table_write(int ssd_fd, storage_metadata_t &entry, size_t index) {
 int md_table_print(const std::vector<storage_metadata_t> &md_table) {
   // determine maximum column widths dynamically
   size_t max_filename_length = 0;
+  size_t max_index_length    = 0 + 5;
   size_t max_offset_length   = 0;
   size_t max_size_length     = 0;
 
   for (const auto &entry : md_table) {
     max_filename_length = std::max(max_filename_length, strlen(entry.filename));
+    max_index_length =
+      std::max(max_index_length, std::to_string(entry.index).size());
     max_offset_length =
       std::max(max_offset_length, std::to_string(entry.start_offset).size());
     max_size_length =
@@ -156,11 +159,13 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
 
   // cast size_t to int for setw
   int filename_width = static_cast<int>(max_filename_length);
+  int index_width    = static_cast<int>(max_index_length);
   int offset_width   = static_cast<int>(max_offset_length);
   int size_width     = static_cast<int>(max_size_length);
 
   // print the header row with dynamic column widths
   std::cout << std::left << std::setw(filename_width) << "Name"
+            << " | " << std::setw(index_width) << "Index"
             << " | " << std::setw(offset_width) << "Offset"
             << " | " << std::setw(size_width) << "Bytes"
             << " | " << std::setw(20) << "Last Modified"
@@ -169,7 +174,8 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
             << " | " << std::setw(20) << "Uploaded" << std::endl;
 
   // print the separator line
-  std::cout << std::string(filename_width + offset_width + size_width + 100,
+  std::cout << std::string(filename_width + index_width + offset_width +
+                             size_width + 100,
                            '-')
             << std::endl;
 
@@ -188,8 +194,9 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
     };
 
     std::cout << std::left << std::setw(filename_width) << entry.filename
-              << " | " << std::right << std::setw(offset_width) << std::hex
-              << entry.start_offset << " | " << std::right
+              << " | " << std::right << std::setw(index_width + 1) << std::hex
+              << entry.index << "|" << std::right << std::setw(offset_width)
+              << std::hex << entry.start_offset << " | " << std::right
               << std::setw(size_width) << std::dec << entry.size << " | "
               << std::setw(20) << format_time(entry.file_time.last_modified)
               << " | " << std::setw(20)
@@ -224,20 +231,14 @@ off_t md_table_find_offset(const std::vector<storage_metadata_t> &md_table) {
   return max_end_offset;
 }
 
-/*
-int update_md_table(int ssd_fd,
-                    const file_info_t &file_info,
-                    const char *filename,
-                    size_t index) {
-*/
-
 int update_md_table(storage_metadata_t *md_table,
                     file_info_t &file_info,
                     int ssd_fd) {
 
   std::vector<storage_metadata_t> md_vector = md_table_read(ssd_fd);
   // index in the metadata table
-  size_t index = md_vector.size();
+  // size_t index = md_vector.size();
+  md_table->index = md_vector.size();
 
 
   // get file information
@@ -255,8 +256,8 @@ int update_md_table(storage_metadata_t *md_table,
   LOG(INFO, " start_offset : 0x%X", md_table->start_offset);
   LOG(INFO, " size         : %d bytes", md_table->size);
 
-  LOG(INFO, "Metadata table size : %d", index);
-  if (!md_table_write(ssd_fd, *md_table, index)) {
+  LOG(INFO, "Metadata table size : %d", md_table->index);
+  if (!md_table_write(ssd_fd, *md_table, md_table->index)) {
     LOG(ERR, "Failed to write metadata entry for file: %s", md_table->filename);
     return 1;
   }
