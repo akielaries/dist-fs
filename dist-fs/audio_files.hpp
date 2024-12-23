@@ -64,6 +64,15 @@ typedef struct {
   uint32_t w_datachunksize;   /* length of data chunk       */
 } dist_fs_wav_t;
 
+
+/** @brief Structure for file timestamps */
+typedef struct {
+  std::time_t last_modified; /**< File last modified*/
+  std::time_t last_accessed; /**< File last accessed*/
+  std::time_t created;       /**< File created*/
+  std::time_t uploaded;      /**< File uploaded*/
+} file_time_info_t;
+
 /** @brief  */
 typedef struct {
   char *name;                // file name
