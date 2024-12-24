@@ -282,8 +282,7 @@ int update_md_table(storage_metadata_t *md_table,
 
 int write_fs_header(int ssd_fd,
                     off_t offset,
-                    const file_info_t &file_info,
-                    uint32_t *header_be) {
+                    const file_info_t &file_info) {
   LOG(INFO, "Creating FS header");
   LOG(INFO, " start bytes: 0x%8X", DIST_FS_SSD_HEADER);
   LOG(INFO, " filename : hex:() ascii:(%s)", file_info.name);
@@ -303,7 +302,7 @@ int write_fs_header(int ssd_fd,
   // TODO/BUG: endianness matters for the header, does it for the rest of the
   // data?? unit tests should expose if this is the case as it verifies the file
   // uploaded vs the one downloaded
-  *header_be = htobe32(DIST_FS_SSD_HEADER);
+  uint32_t header_be = htobe32(DIST_FS_SSD_HEADER);
   lseek(ssd_fd, offset, SEEK_SET);
   if (write(ssd_fd, &header_be, sizeof(header_be)) != sizeof(header_be)) {
     LOG(ERR, "Failed to write FS header");
@@ -379,6 +378,7 @@ int initialize_ssd(config_context_t cfg_ctx, int &ssd_fd, off_t &next_offset) {
 int transfer_file_data(int file_fd, int ssd_fd, off_t offset) {
   LOG(INFO, "Writing file data to SSD at offset: 0x%08lX", offset);
 
+  // 4kb buffer
   char buffer[4096];
   ssize_t bytes_read, bytes_written, total_bytes_written;
 
@@ -465,13 +465,8 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
   }
   file_info.offset = next_offset;
 
-  uint32_t header_be;
-
-  // TODO this shouldnt be here anymore?
-  // std::vector<storage_metadata_t> md_table = md_table_read(ssd_fd);
-
   // read from the metadata table to get the next available offset in the FS
-  if (write_fs_header(ssd_fd, next_offset, file_info, &header_be)) {
+  if (write_fs_header(ssd_fd, next_offset, file_info)) {
     close(ssd_fd);
     return 1;
   }
@@ -497,7 +492,6 @@ int upload_file(config_context_t cfg_ctx, const char *filename) {
 
   // update the metadata table with a new entry
   if (update_md_table(&md_table, file_info, ssd_fd)) {
-    // if (update_md_table(ssd_fd, file_info, filename, md_table.size())) {
     close(file_fd);
     close(ssd_fd);
     return 1;
