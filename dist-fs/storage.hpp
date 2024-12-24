@@ -35,13 +35,14 @@
  * @struct storage_metadata_t
  * @brief Structure to hold metadata information for files on the SSD
  */
-typedef struct {
+typedef struct storage_metadata_t {
   char filename[256];     /**< File name (including directories) */
   off_t start_offset;     /**< Offset on the SSD where the file begins */
   size_t size;            /**< File size in bytes */
   bool is_directory;      /**< Flag indicating if the entry is a directory */
   size_t index;           /**< Index in the metadata table */
   file_times_t file_time; /**< File timestamps */
+  std::vector<storage_metadata_t> children; /**< for directories */
 } storage_metadata_t;
 
 /** @brief Offset where the metadata table begins on the SSD */
