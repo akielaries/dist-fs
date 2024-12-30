@@ -179,8 +179,8 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
             << " | " << std::setw(size_width) << "bytes"
             << " | " << std::setw(size_kb_width) << "kb"
             << " | " << std::setw(size_mb_width) << "mb"
-            << " | " << std::setw(20) << "Last Modified"
-            << " | " << std::setw(20) << "Last Accessed"
+            << " | " << std::setw(20) << "Modified"
+            << " | " << std::setw(20) << "Accessed"
             << " | " << std::setw(20) << "Created"
             << " | " << std::setw(20) << "Uploaded" << std::endl;
 
