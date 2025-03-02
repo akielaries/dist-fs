@@ -205,7 +205,7 @@ int md_table_print(const std::vector<storage_metadata_t> &md_table) {
     };
 
     std::cout << std::left << std::setw(filename_width) << entry.filename
-              << " | " << std::right << std::setw(index_width + 1) 
+              << " | " << std::right << std::setw(index_width + 1)
               << entry.index << "|" << std::right << std::setw(offset_width + 1)
               << std::hex << entry.start_offset << " | " << std::right
               << std::setw(size_width) << std::dec << entry.size << " | "
@@ -280,9 +280,7 @@ int update_md_table(storage_metadata_t *md_table,
 }
 
 
-int write_fs_header(int ssd_fd,
-                    off_t offset,
-                    const file_info_t &file_info) {
+int write_fs_header(int ssd_fd, off_t offset, const file_info_t &file_info) {
   LOG(INFO, "Creating FS header");
   LOG(INFO, " start bytes: 0x%8X", DIST_FS_SSD_HEADER);
   LOG(INFO, " filename : hex:() ascii:(%s)", file_info.name);
